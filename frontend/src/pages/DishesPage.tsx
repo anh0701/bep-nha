@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Search, SlidersHorizontal, Utensils, X } from 'lucide-react'
+import { AlertTriangle, LoaderCircle, Pencil, Plus, Search, SlidersHorizontal, Trash2, Utensils, X } from 'lucide-react'
 
-import { getDishes, createDish, updateDish } from '../services/dish.service'
+import { getDishes, createDish, updateDish, deleteDish } from '../services/dish.service'
 import { getCategories } from '../services/category.service'
 import type { Dish, DishFormData } from '../types/dish'
 import type { Category } from '../types/category'
+import CategorySelect from '../components/CategorySelect'
 
 export default function DishesPage() {
   const [dishes, setDishes] = useState<Dish[]>([])
@@ -24,6 +25,9 @@ export default function DishesPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingDish, setEditingDish] = useState<Dish | null>(null)
+  const [deletingDishId, setDeletingDishId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [dishToDelete, setDishToDelete] = useState<Dish | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -163,6 +167,27 @@ export default function DishesPage() {
     }
   }
 
+  async function handleDeleteDish(dish: Dish) {
+    setDeletingDishId(dish.id)
+    setDeleteError(null)
+
+    try {
+      await deleteDish(dish.id)
+
+      setDishes((currentDishes) =>
+        currentDishes.filter((item) => item.id !== dish.id),
+      )
+
+      setDishToDelete(null)
+    } catch (err) {
+      console.error('Failed to delete dish:', err)
+
+      setDeleteError('Không thể xóa món ăn. Vui lòng thử lại.')
+    } finally {
+      setDeletingDishId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-7 px-5 py-7 md:px-10 md:py-10">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -219,25 +244,21 @@ export default function DishesPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted">
+          <div className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted">
             <SlidersHorizontal size={17} />
             Lọc danh mục
           </div>
 
-          <select
-            value={selectedCategory}
-            onChange={(event) => setSelectedCategory(event.target.value)}
-            aria-label="Lọc theo danh mục"
-            className="w-full rounded-xl border border-beige bg-white px-3 py-3 text-sm text-ink outline-none focus:border-forest sm:max-w-xs"
-          >
-            <option value="all">Tất cả danh mục</option>
-
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-75">
+            <CategorySelect
+              categories={categories}
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              includeAll
+              allLabel="Tất cả danh mục"
+              ariaLabel="Lọc theo danh mục"
+            />
+          </div>
 
           <p className="text-sm text-muted sm:ml-auto">
             {loading
@@ -245,9 +266,27 @@ export default function DishesPage() {
               : `${filteredDishes.length} / ${dishes.length} món`}
           </p>
         </div>
+
       </section>
 
       <section>
+        {deleteError && (
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            <p>{deleteError}</p>
+
+            <button
+              type="button"
+              onClick={() => setDeleteError(null)}
+              aria-label="Đóng thông báo lỗi"
+              className="shrink-0 rounded-lg p-1 hover:bg-red-100"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="py-16 text-center text-sm text-muted">
             Đang tải kho món ăn...
@@ -323,8 +362,8 @@ export default function DishesPage() {
                   {dish.category}
                 </span>
 
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest">
+                <div className="flex items-center gap-1">
+                  <span className="hidden items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest sm:inline-flex">
                     <span className="size-1.5 rounded-full bg-forest" />
                     Đang dùng
                   </span>
@@ -337,6 +376,20 @@ export default function DishesPage() {
                     className="rounded-lg p-2 text-muted transition hover:bg-sage/70 hover:text-forest"
                   >
                     <Pencil size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteError(null)
+                      setDishToDelete(dish)
+                    }}
+                    disabled={deletingDishId === dish.id}
+                    aria-label={`Xóa món ${dish.name}`}
+                    title="Xóa món ăn"
+                    className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </article>
@@ -421,29 +474,23 @@ export default function DishesPage() {
                   Danh mục
                 </label>
 
-                <select
+
+                <CategorySelect
                   id="dish-category"
+                  categories={categories}
                   value={formData.category_id}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setFormData((current) => ({
                       ...current,
-                      category_id: event.target.value,
+                      category_id: value,
                     }))
                   }
+                  placeholder="Chọn danh mục"
+                  ariaLabel="Danh mục món ăn"
                   required
                   disabled={isSubmitting}
-                  className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none focus:border-forest disabled:opacity-60"
-                >
-                  <option value="" disabled>
-                    Chọn danh mục
-                  </option>
+                />
 
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {formError && (
@@ -482,6 +529,81 @@ export default function DishesPage() {
           </section>
         </div>
       )}
+
+
+      {dishToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm"
+          onClick={() => {
+            if (deletingDishId === null) {
+              setDishToDelete(null)
+            }
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+            className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-beige bg-cream p-6 shadow-2xl duration-200 sm:p-7"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <AlertTriangle size={24} strokeWidth={2} />
+            </div>
+
+            <h2
+              id="delete-modal-title"
+              className="mt-5 text-xl font-bold text-ink"
+            >
+              Xóa món ăn này?
+            </h2>
+
+            <p
+              id="delete-modal-description"
+              className="mt-2 text-sm leading-6 text-muted"
+            >
+              Bạn có chắc muốn xóa{' '}
+              <span className="font-semibold text-ink">
+                {dishToDelete.name}
+              </span>
+              {' '}khỏi danh sách món ăn? Bạn sẽ không còn thấy món này trong danh
+              mục đang hoạt động.
+            </p>
+
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deletingDishId !== null}
+                onClick={() => setDishToDelete(null)}
+                className="rounded-xl border border-beige px-5 py-3 text-sm font-semibold text-ink transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Hủy
+              </button>
+
+              <button
+                type="button"
+                disabled={deletingDishId !== null}
+                onClick={() => void handleDeleteDish(dishToDelete)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deletingDishId === dishToDelete.id ? (
+                  <>
+                    <LoaderCircle size={16} className="animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Xóa món ăn
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

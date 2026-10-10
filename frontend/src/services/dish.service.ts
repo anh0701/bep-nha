@@ -60,3 +60,17 @@ export async function updateDish(
 
   return result.data as Dish
 }
+
+export async function deleteDish(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/dishes/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    const result = await response.json().catch(() => null)
+
+    throw new Error(
+      result?.message ?? `Failed to delete dish: ${response.status}`,
+    )
+  }
+}
