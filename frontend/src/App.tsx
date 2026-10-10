@@ -11,6 +11,10 @@ import {
   Utensils,
 } from 'lucide-react'
 
+import { useEffect, useState } from 'react'
+import { getDishes } from './services/dish.service'
+import type { Dish } from './types/dish'
+
 const navigation = [
   { label: 'Trang chủ', icon: CookingPot, active: true },
   { label: 'Random món ăn', icon: Shuffle, active: false },
@@ -20,13 +24,77 @@ const navigation = [
   { label: 'Thống kê', icon: ChartNoAxesColumn, active: false },
 ]
 
-const todayMeals = [
-  { category: 'MÓN CANH', name: 'Canh bí đỏ nấu xương', time: 'Bữa trưa' },
-  { category: 'MÓN MẶN', name: 'Gà kho gừng', time: 'Bữa trưa' },
-  { category: 'MÓN RAU', name: 'Rau muống luộc', time: 'Bữa trưa' },
-]
+
+function getShortCategory(category: string) {
+  const labels: Record<string, string> = {
+    'Bún/phở/miến/mì': 'Bún · Phở · Mì',
+    'Món mặn': 'Món mặn',
+    'Món chay': 'Món chay',
+    'Canh': 'Món canh',
+    'Rau': 'Món rau',
+    'Cháo': 'Cháo',
+  }
+
+  return labels[category] ?? category
+}
+
+function getFeaturedDishes<T extends { category: string }>(
+  dishes: T[],
+  limit: number,
+): T[] {
+  const groups = new Map<string, T[]>()
+
+  for (const dish of dishes) {
+    const group = groups.get(dish.category) ?? []
+    group.push(dish)
+    groups.set(dish.category, group)
+  }
+
+  const featured: T[] = []
+  const categories = [...groups.keys()]
+
+  while (featured.length < limit) {
+    let added = false
+
+    for (const category of categories) {
+      const group = groups.get(category)
+
+      if (group && group.length > 0) {
+        featured.push(group.shift()!)
+        added = true
+
+        if (featured.length >= limit) break
+      }
+    }
+
+    if (!added) break
+  }
+
+  return featured
+}
 
 function App() {
+  const [dishes, setDishes] = useState<Dish[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const featuredDishes = getFeaturedDishes(dishes, 6)
+
+  useEffect(() => {
+    async function loadDishes() {
+      try {
+        const result = await getDishes()
+        setDishes(result.data)
+      } catch (err) {
+        console.error('Failed to load dishes:', err)
+        setError('Không thể tải danh sách món ăn.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDishes()
+  }, [])
+
   return (
     <div className="min-h-screen bg-cream md:flex">
       <aside className="hidden min-h-screen w-64 shrink-0 flex-col border-r border-beige bg-white/60 p-6 md:flex">
@@ -131,60 +199,68 @@ function App() {
               </div>
             </div>
           </section>
-
+   
           <section>
-            <div className="mb-5 flex items-end justify-between gap-3">
+            <div className="mb-5 flex items-end justify-between gap-4">
               <div>
-                <p className="text-sm text-muted">Gợi ý cho gia đình</p>
-                <h2 className="mt-1 text-xl font-bold sm:text-2xl">
-                  Thực đơn hôm nay
+                <p className="text-sm text-muted">Hôm nay nấu gì?</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+                  Khám phá món ngon
                 </h2>
+                <p className="mt-2 text-sm text-muted">
+                  Một chút gợi ý cho bữa cơm gia đình.
+                </p>
               </div>
+
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-sm font-medium text-forest hover:underline"
+                className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-forest hover:underline"
               >
-                Xem thực đơn <ChevronRight size={16} />
+                Xem tất cả <ChevronRight size={16} />
               </button>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {todayMeals.map((meal, index) => (
-                <article
-                  key={meal.name}
-                  className="rounded-2xl border border-beige/80 bg-white p-5 transition hover:border-forest/30"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-lg bg-sage px-2.5 py-1 text-xs font-semibold tracking-wide text-forest">
-                      {meal.category}
-                    </span>
-                    <span className="text-xs text-muted">{meal.time}</span>
-                  </div>
-
-                  <div className="mt-5 flex items-center gap-3">
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cream text-forest">
-                      {index === 0 ? (
-                        <CookingPot size={21} />
-                      ) : (
-                        <Utensils size={21} />
-                      )}
+            {loading ? (
+              <p className="py-10 text-center text-sm text-muted">
+                Đang chuẩn bị danh sách món ngon...
+              </p>
+            ) : error ? (
+              <p role="alert" className="py-8 text-sm text-red-600">
+                {error}
+              </p>
+            ) : featuredDishes.length === 0 ? (
+              <p className="py-8 text-sm text-muted">
+                Kho món ăn đang trống. Hãy thêm món đầu tiên nhé!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
+                {featuredDishes.map((dish) => (
+                  <article
+                    key={dish.id}
+                    className="group flex min-w-0 items-start gap-4 border-b border-beige/80 py-5"
+                  >
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-sage/70 text-forest transition group-hover:bg-sage">
+                      <CookingPot size={22} strokeWidth={1.8} />
                     </div>
-                    <h3 className="font-semibold leading-6">{meal.name}</h3>
-                  </div>
 
-                  <div className="mt-5 border-t border-beige/70 pt-4">
-                    <span className="text-xs text-muted">
-                      Chưa xác nhận đã nấu
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-semibold tracking-wide text-muted">
+                        {getShortCategory(dish.category)}
+                      </span>
 
-            <p className="mt-3 text-xs leading-5 text-muted">
-              Đây là dữ liệu minh họa giao diện. Thực đơn thật sẽ được lấy từ
-              database sau khi hoàn thành backend.
-            </p>
+                      <h3 className="mt-1 font-semibold leading-6 text-ink transition group-hover:text-forest">
+                        {dish.name}
+                      </h3>
+                    </div>
+
+                    <ChevronRight
+                      size={17}
+                      className="mt-5 shrink-0 text-muted/60 transition group-hover:translate-x-0.5 group-hover:text-forest"
+                    />
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">

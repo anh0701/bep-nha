@@ -1,5 +1,12 @@
-###
-GET http://localhost:3000/api/health
+@hostname = localhost
+@port = 3000
+@baseUrl = http://{{hostname}}:{{port}}
 
 ###
-GET http://localhost:3000/api/db-check
+GET {{baseUrl}}/api/health
+
+###
+GET {{baseUrl}}/api/db-check
+
+###
+GET {{baseUrl}}/api/dishes
