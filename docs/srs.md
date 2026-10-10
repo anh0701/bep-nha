@@ -21,3 +21,14 @@ flowchart TD
     F --> H["Cập nhật thống kê"]
     G --> I["Không tính là đã nấu"]
 ```
+
+## Danh sach API
+
+| Method | Endpoint | Chức năng |
+| --- | --- | --- |
+| GET | /api/health | Kiểm tra server |
+| GET | /api/dishes | Lấy danh sách món ăn |
+| POST | /api/dishes | Thêm món ăn |
+| PUT | /api/dishes/:id | Sửa món ăn |
+| DELETE | /api/dishes/:id | Ngừng hiển thị món ăn |
+| GET | /api/categories | Lấy danh mục món ăn |

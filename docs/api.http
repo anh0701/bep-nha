@@ -10,3 +10,31 @@ GET {{baseUrl}}/api/db-check
 
 ###
 GET {{baseUrl}}/api/dishes
+
+###
+POST {{baseUrl}}/api/dishes
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name":"Món thử nghiệm",
+    "category_id":"1"
+}
+
+###
+
+PUT {{baseUrl}}/api/dishes/143
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name":"Tên mới",
+    "category_id":"1"
+}
+
+###
+
+DELETE {{baseUrl}}/api/dishes/143
+
+###
+GET {{baseUrl}}/api/categories
