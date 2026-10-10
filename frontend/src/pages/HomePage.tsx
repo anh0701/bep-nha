@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 import { getDishes } from '../services/dish.service'
 import type { Dish } from '../types/dish'
+import { Link, useNavigate } from 'react-router'
 
 function getShortCategory(category: string) {
   const labels: Record<string, string> = {
@@ -68,6 +69,8 @@ export default function HomePage() {
 
   const featuredDishes = getFeaturedDishes(dishes, 6)
 
+  const navigate = useNavigate()
+
   useEffect(() => {
     async function loadDishes() {
       try {
@@ -106,10 +109,8 @@ export default function HomePage() {
 
           <button
             type="button"
+            onClick={() => navigate('/random')}
             className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-forest transition hover:bg-sage"
-            onClick={() => {
-              window.alert('Chức năng Random món ăn sẽ được triển khai ở bước tiếp theo.')
-            }}
           >
             <Shuffle size={18} />
             Random món ăn
@@ -143,9 +144,7 @@ export default function HomePage() {
           <button
             type="button"
             className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-forest hover:underline"
-            onClick={() => {
-              window.alert('Trang Kho món ăn sẽ được kết nối ở bước tiếp theo.')
-            }}
+            onClick={() => navigate('/dishes')}
           >
             Xem tất cả <ChevronRight size={16} />
           </button>
@@ -198,9 +197,7 @@ export default function HomePage() {
         <button
           type="button"
           className="flex items-center gap-4 rounded-2xl border border-beige/80 bg-white p-5 text-left transition hover:bg-sage/20"
-          onClick={() => {
-            window.alert('Trang Kho món ăn sẽ được kết nối ở bước tiếp theo.')
-          }}
+          onClick={() => navigate("/dishes")}
         >
           <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
             <Utensils size={23} />
@@ -219,9 +216,7 @@ export default function HomePage() {
         <button
           type="button"
           className="flex items-center gap-4 rounded-2xl border border-beige/80 bg-white p-5 text-left transition hover:bg-sage/20"
-          onClick={() => {
-            window.alert('Lịch sử nấu và thống kê sẽ được phát triển sau.')
-          }}
+          onClick={() => navigate("/history")}
         >
           <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
             <ChartNoAxesColumn size={23} />
