@@ -1,5 +1,8 @@
-
-import type { DishListResponse } from '../types/dish'
+import type {
+  Dish,
+  DishFormData,
+  DishListResponse,
+} from '../types/dish'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -11,4 +14,26 @@ export async function getDishes(): Promise<DishListResponse> {
   }
 
   return response.json() as Promise<DishListResponse>
+}
+
+export async function createDish(
+  formData: DishFormData,
+): Promise<Dish> {
+  const response = await fetch(`${API_BASE_URL}/dishes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(formData),
+  })
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ?? `Failed to create dish: ${response.status}`,
+    )
+  }
+
+  return result.data as Dish
 }
