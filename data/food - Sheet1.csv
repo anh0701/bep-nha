@@ -1,0 +1,143 @@
+stt,name,category
+1,Canh bí đỏ nấu xương,Canh
+2,Canh khoai sọ nấu xương,Canh
+3,Canh rau ngót nấu sườn,Canh
+4,Canh sườn chua,Canh
+5,Canh sườn ngũ quả,Canh
+6,Canh bắp cải thịt băm,Canh
+7,Canh bầu thịt băm,Canh
+8,Canh bí xanh thịt băm,Canh
+9,Canh cà chua thịt băm,Canh
+10,Canh cải thịt băm,Canh
+11,Canh chua thịt băm,Canh
+12,Canh khoai mỡ thịt băm,Canh
+13,Canh kim chỉ thịt băm đậu hũ,Canh
+14,Canh mọc rau củ nấm,Canh
+15,Canh mướp thịt băm,Canh
+16,Canh mướp đắng nhồi thịt,Canh
+17,Canh rau cải thịt băm,Canh
+18,Canh rau dền thịt băm,Canh
+19,Canh rau ngót thịt băm,Canh
+20,Canh cá nấu dưa chua,Canh
+21,Canh cá nấu khế,Canh
+22,Canh cá nấu măng,Canh
+23,Canh cá nấu sấu,Canh
+24,Canh chua cá,Canh
+25,Canh cà bung,Canh
+26,Canh cua mồng tơi rau đay mướp,Canh
+27,Canh riêu cua,Canh
+28,Canh bắp cải,Canh
+29,Canh bầu,Canh
+30,Canh bí đao,Canh
+31,Canh bí đỏ,Canh
+32,Canh bí đỏ trứng,Canh
+33,Canh cà chua trứng,Canh
+34,Cánh gà rim nước mắm,Món mặn
+35,Gà kho gừng,Món mặn
+36,Gà kho sả,Món mặn
+37,Gà rim mật ong,Món mặn
+38,Gà rim nước mắm,Món mặn
+39,Gà rim tiêu,Món mặn
+40,Cánh gà rang tỏi,Món mặn
+41,Cánh gà sốt me,Món mặn
+42,Cổ gà rang muối,Món mặn
+43,Đùi gà áp chảo sốt tiêu,Món mặn
+44,Gà rang muối,Món mặn
+45,Gà rang nghệ,Món mặn
+46,Gà rang sả,Món mặn
+47,Gà rang tỏi,Món mặn
+48,Gà xào bắp cải,Món mặn
+49,Gà xào cải chua,Món mặn
+50,Gà xào giá,Món mặn
+51,Gà xào hành tây,Món mặn
+52,Cháo gà,Cháo
+53,Cháo cá,Cháo
+54,Cháo thịt băm,Cháo
+55,Cháo trứng,Cháo
+56,Cháo đậu xanh thịt băm,Cháo
+57,Phở cuốn thập cẩm,Bún/phở/miến/mì
+58,Phở gà,Bún/phở/miến/mì
+59,Phở trộn,Bún/phở/miến/mì
+60,Bún chả,Bún/phở/miến/mì
+61,Bún cá rô đồng,Bún/phở/miến/mì
+62,Bún măng vịt,Bún/phở/miến/mì
+63,Bún riêu cua,Bún/phở/miến/mì
+64,Bún vịt om sấu,Bún/phở/miến/mì
+65,Bún đậu mắm tôm,Bún/phở/miến/mì
+66,Canh bún rau củ,Bún/phở/miến/mì
+67,Miến gà/thịt,Bún/phở/miến/mì
+68,Miến trộn Hàn Quốc,Bún/phở/miến/mì
+69,Miến xào rau,Bún/phở/miến/mì
+70,Miến xào trứng,Bún/phở/miến/mì
+71,Mì tôm,Bún/phở/miến/mì
+72,Mì tương đen,Bún/phở/miến/mì
+73,Mì xào rau cải,Bún/phở/miến/mì
+74,Nấm rơm kho tiêu,Món chay
+75,Nấm đùi gà kho gừng,Món chay
+76,Mít non kho nước dừa,Món chay
+77,Măng kho nấm,Món chay
+78,Rau củ kho chay,Món chay
+79,Đậu hũ rim nước tương,Món chay
+80,Củ cải kho nấm,Món chay
+81,Nấm bào ngư xào sả ớt,Rau
+82,Rau củ xào thập cẩm,Rau
+83,Cải thìa xào nấm đông cô,Rau
+84,Bông cải xào nấm,Rau
+85,Đậu que xào nấm,Rau
+86,Mì căn xào sả ớt,Món chay
+87,Nấm sốt tiêu xanh,Món chay
+88,Đậu hũ sốt sa tế chay,Món chay
+89,Chả giò chay,Món chay
+90,Nấm kim châm chiên giòn,Món chay
+91,Đậu hũ chiên giòn sốt chua ngọt,Món chay
+92,Bánh xèo chay,Món chay
+93,Rau củ hấp chấm kho quẹt chay,Rau
+94,Nấm hấp sả,Rau
+95,Canh chua chay,Canh
+96,Canh khổ qua hầm chay,Canh
+97,Canh bí đỏ đậu phộng,Canh
+98,Canh nấm rau củ,Canh
+99,Canh bầu nấu nấm,Canh
+100,Canh cải thảo nấm,Canh
+101,Gỏi ngó sen chay,Món chay
+102,Gỏi bắp chuối chay,Món chay
+103,Gỏi cuốn chay,Món chay
+104,Bún riêu chay,Bún/phở/miến/mì
+105,Hủ tiếu chay,Bún/phở/miến/mì
+106,Cháo nấm chay,Cháo
+107,Cơm chiên chay,Món chay
+108,Ngan luộc,Món mặn
+109,Vịt luộc,Món mặn
+110,Ngan lọc lườn xào lăn sả ớt,Món mặn
+111,Vịt xào măng,Món mặn
+112,Vịt xào sả ớt,Món mặn
+113,Ngan nấu giả cầy,Món mặn
+114,Vịt quay,Món mặn
+115,Vịt kho gừng,Món mặn
+116,Vịt om sấu,Món mặn
+117,Ngan cháy tỏi,Món mặn
+118,Gỏi vịt bắp cải,Món mặn
+119,Ba chỉ kho tiêu,Món mặn
+120,Ba chỉ rim nước mắm,Món mặn
+121,Chân giò / đuôi lợn kho riềng,Món mặn
+122,Chân giò/ đuôi lợn kho tương,Món mặn
+123,Giả cầy chân giò,Món mặn
+124,Giò rim mắm tỏi ớt,Món mặn
+125,Sườn non rim mặn ngọt,Món mặn
+126,Thịt băm rim nước mắm,Món mặn
+127,Thịt băm rim tiêu,Món mặn
+128,Thịt heo rim nước mắm,Món mặn
+129,Thịt heo rim sả ớt,Món mặn
+130,Thịt heo rim tiêu xanh,Món mặn
+131,Thịt kho dưa chua,Món mặn
+132,Thịt kho khóm (dứa),Món mặn
+133,Thịt kho tàu,Món mặn
+134,Ba chỉ xào dưa chua,Món mặn
+135,Bắp cải cuộn thịt sốt cà chua,Món mặn
+136,Nấm rơm xào thịt băm,Món mặn
+137,Sườn xào chua ngọt,Món mặn
+138,Thịt băm chưng trứng,Món mặn
+139,Thịt băm sốt mắm tỏi,Món mặn
+140,Thịt băm xào giá,Món mặn
+141,Thịt băm xào hành tây,Món mặn
+142,Thịt băm xào ngô ngọt,Món mặn
