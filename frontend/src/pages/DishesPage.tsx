@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Search, SlidersHorizontal, Utensils, X } from 'lucide-react'
+import { Pencil, Plus, Search, SlidersHorizontal, Utensils, X } from 'lucide-react'
 
-import { getDishes, createDish } from '../services/dish.service'
+import { getDishes, createDish, updateDish } from '../services/dish.service'
 import { getCategories } from '../services/category.service'
 import type { Dish, DishFormData } from '../types/dish'
 import type { Category } from '../types/category'
@@ -23,6 +23,7 @@ export default function DishesPage() {
   })
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingDish, setEditingDish] = useState<Dish | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -65,9 +66,20 @@ export default function DishesPage() {
   }, [dishes, search, selectedCategory])
 
   function openCreateForm() {
+    setEditingDish(null)
     setFormData({
       name: '',
       category_id: categories[0]?.id ?? '',
+    })
+    setFormError(null)
+    setShowCreateForm(true)
+  }
+
+  function openEditForm(dish: Dish) {
+    setEditingDish(dish)
+    setFormData({
+      name: dish.name,
+      category_id: dish.category_id,
     })
     setFormError(null)
     setShowCreateForm(true)
@@ -77,6 +89,7 @@ export default function DishesPage() {
     if (isSubmitting) return
 
     setShowCreateForm(false)
+    setEditingDish(null)
     setFormError(null)
   }
 
@@ -106,15 +119,31 @@ export default function DishesPage() {
     try {
       setIsSubmitting(true)
 
-      const newDish = await createDish({
+      const payload: DishFormData = {
         name,
         category_id: formData.category_id,
-      })
+      }
 
-      setDishes((currentDishes) => [...currentDishes, newDish])
+      if (editingDish) {
+        const updatedDish = await updateDish(editingDish.id, payload)
+
+        setDishes((currentDishes) => [
+          updatedDish,
+          ...currentDishes.filter((dish) => dish.id !== updatedDish.id),
+        ])
+      } else {
+        const newDish = await createDish(payload)
+
+        setDishes((currentDishes) => [
+          newDish,
+          ...currentDishes.filter((dish) => dish.id !== newDish.id),
+        ])
+      }
+
       setSelectedCategory('all')
       setSearch('')
       setShowCreateForm(false)
+      setEditingDish(null)
       setFormData({ name: '', category_id: '' })
     } catch (err) {
       console.error('Failed to create dish:', err)
@@ -294,10 +323,22 @@ export default function DishesPage() {
                   {dish.category}
                 </span>
 
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest">
-                  <span className="size-1.5 rounded-full bg-forest" />
-                  Đang dùng
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest">
+                    <span className="size-1.5 rounded-full bg-forest" />
+                    Đang dùng
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => openEditForm(dish)}
+                    aria-label={`Sửa món ${dish.name}`}
+                    title="Sửa món ăn"
+                    className="rounded-lg p-2 text-muted transition hover:bg-sage/70 hover:text-forest"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -325,7 +366,7 @@ export default function DishesPage() {
                   id="create-dish-title"
                   className="text-xl font-bold text-ink"
                 >
-                  Thêm món ăn mới
+                  {editingDish ? 'Chỉnh sửa món ăn' : 'Thêm món ăn mới'}
                 </h2>
 
                 <p className="mt-1 text-sm text-muted">
@@ -430,7 +471,11 @@ export default function DishesPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Plus size={17} />
-                  {isSubmitting ? 'Đang lưu...' : 'Lưu món ăn'}
+                  {isSubmitting
+                    ? 'Đang lưu...'
+                    : editingDish
+                      ? 'Lưu thay đổi'
+                      : 'Lưu món ăn'}
                 </button>
               </div>
             </form>

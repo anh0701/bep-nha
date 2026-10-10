@@ -37,3 +37,26 @@ export async function createDish(
 
   return result.data as Dish
 }
+
+export async function updateDish(
+  id: string,
+  formData: DishFormData,
+): Promise<Dish> {
+  const response = await fetch(`${API_BASE_URL}/dishes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(formData),
+  })
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ?? `Failed to update dish: ${response.status}`,
+    )
+  }
+
+  return result.data as Dish
+}
