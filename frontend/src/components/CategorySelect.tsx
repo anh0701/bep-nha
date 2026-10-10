@@ -102,14 +102,14 @@ export default function CategorySelect({
             tabIndex={0}
             onClick={(event) => {
               event.stopPropagation()
-              onChange('')
+              onChange(includeAll ? 'all' : '')
               setIsOpen(false)
             }}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
                 event.stopPropagation()
-                onChange('')
+                onChange(includeAll ? 'all' : '')
                 setIsOpen(false)
               }
             }}
