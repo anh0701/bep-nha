@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     AlertCircle,
     Check,
@@ -63,9 +63,19 @@ export default function RandomPage() {
     const [search, setSearch] = useState('')
 
     const [result, setResult] = useState<RandomResult | null>(null)
+    const resultRef = useRef<HTMLElement | null>(null)
     const [hasRandomized, setHasRandomized] = useState(false)
     const [randomLoading, setRandomLoading] = useState(false)
     const [randomError, setRandomError] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!result) return
+
+        resultRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        })
+    }, [result])
 
     useEffect(() => {
         async function loadDishes() {
@@ -193,7 +203,7 @@ export default function RandomPage() {
                     Hôm nay ăn gì?
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-muted sm:text-base">
                     Để Bếp Nhà chọn món giúp bạn. Chọn một món riêng lẻ
                     hoặc để Bếp Nhà gợi ý cả bữa ăn.
                 </p>
@@ -465,6 +475,7 @@ export default function RandomPage() {
 
             {result && (
                 <section
+                    ref={resultRef}
                     aria-live="polite"
                     className="rounded-3xl border border-beige/80 bg-white p-5 sm:p-7"
                 >
