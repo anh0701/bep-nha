@@ -87,3 +87,65 @@ export async function deactivateDish(id: string): Promise<boolean> {
 
   return result.rowCount === 1
 }
+
+
+export interface RandomDishCandidate extends Dish {
+  meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side'
+  category_cook_count: string
+  cooked_recently: boolean
+}
+
+export async function findRandomCandidates(
+  categoryId?: string,
+  dishIds?: string[],
+): Promise<RandomDishCandidate[]> {
+  const result = await pool.query<RandomDishCandidate>(
+    `
+    WITH category_history AS (
+      SELECT
+        d.category_id,
+        COUNT(cr.id) AS cook_count
+      FROM cooking_records cr
+      INNER JOIN dishes d ON d.id = cr.dish_id
+      WHERE cr.cooked_on >= CURRENT_DATE - 29
+        AND cr.cooked_on <= CURRENT_DATE
+      GROUP BY d.category_id
+    ),
+    dish_history AS (
+      SELECT
+        dish_id,
+        MAX(cooked_on) AS last_cooked_on
+      FROM cooking_records
+      GROUP BY dish_id
+    )
+    SELECT
+      d.id::text AS id,
+      d.name,
+      d.category_id::text AS category_id,
+      c.name AS category,
+      d.is_active,
+      d.meal_role,
+      COALESCE(ch.cook_count, 0)::text AS category_cook_count,
+      COALESCE(
+        dh.last_cooked_on >= CURRENT_DATE - 2,
+        FALSE
+      ) AS cooked_recently
+    FROM dishes d
+    INNER JOIN categories c
+      ON c.id = d.category_id
+    LEFT JOIN category_history ch
+      ON ch.category_id = d.category_id
+    LEFT JOIN dish_history dh
+      ON dh.dish_id = d.id
+    WHERE d.is_active = TRUE
+      AND d.meal_role IS NOT NULL
+      AND ($1::bigint IS NULL OR d.category_id = $1::bigint)
+      AND ($2::bigint[] IS NULL OR d.id = ANY($2::bigint[]))
+    ORDER BY d.id
+    `,
+    [categoryId ?? null, dishIds ?? null],
+  )
+
+  return result.rows
+}
+

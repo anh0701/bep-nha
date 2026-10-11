@@ -1,10 +1,12 @@
 
 import type { Request, Response } from 'express'
+
 import {
     getAllDishes,
     addDish,
     modifyDish,
     removeDish,
+    randomize,
 } from '../services/dish.service.js'
 
 function isDatabaseError(
@@ -155,3 +157,107 @@ export async function deleteDish(
         res.status(500).json({ message: 'Cannot remove dish' })
     }
 }
+
+export async function randomDishes(
+    req: Request,
+    res: Response,
+): Promise<void> {
+    const body = req.body
+
+    if (
+        !body ||
+        typeof body !== 'object' ||
+        !['meal', 'single'].includes(body.mode)
+    ) {
+        res.status(400).json({
+            message: 'mode must be meal or single',
+        })
+        return
+    }
+
+    const categoryId =
+        typeof body.category_id === 'string' ||
+        typeof body.category_id === 'number'
+            ? String(body.category_id)
+            : undefined
+
+    if (categoryId !== undefined && !isValidId(categoryId)) {
+        res.status(400).json({
+            message: 'Invalid category_id',
+        })
+        return
+    }
+
+    let dishIds: string[] | undefined
+
+    if (body.dish_ids !== undefined) {
+        if (
+            !Array.isArray(body.dish_ids) ||
+            !body.dish_ids.every(
+                (id: unknown) =>
+                    (typeof id === 'string' || typeof id === 'number') &&
+                    isValidId(String(id)),
+            )
+        ) {
+            res.status(400).json({
+                message: 'dish_ids must be an array of valid IDs',
+            })
+            return
+        }
+
+        dishIds = Array.from(
+            new Set<string>(
+                (body.dish_ids as Array<string | number>).map((id) => String(id)),
+            ),
+        )
+    }
+
+    if (categoryId && dishIds) {
+        res.status(400).json({
+            message: 'Choose category_id or dish_ids, not both',
+        })
+        return
+    }
+
+    if (body.mode === 'meal' && (categoryId || dishIds)) {
+        res.status(400).json({
+            message: 'Meal mode does not accept category_id or dish_ids',
+        })
+        return
+    }
+
+    if (body.mode === 'single' && body.meal_type !== undefined) {
+        res.status(400).json({
+            message: 'meal_type is only available in meal mode',
+        })
+        return
+    }
+
+    if (
+        body.mode === 'meal' &&
+        body.meal_type !== undefined &&
+        !['rice', 'one_dish', 'auto'].includes(body.meal_type)
+    ) {
+        res.status(400).json({
+            message: 'meal_type must be rice, one_dish or auto',
+        })
+        return
+    }
+
+    try {
+        const result = await randomize({
+            mode: body.mode,
+            mealType: body.meal_type,
+            categoryId,
+            dishIds,
+        })
+
+        res.status(200).json({ data: result })
+    } catch (error) {
+        console.error('Failed to randomize dishes:', error)
+        res.status(500).json({
+            message: 'Cannot randomize dishes',
+        })
+    }
+}
+

@@ -38,3 +38,33 @@ DELETE {{baseUrl}}/api/dishes/143
 
 ###
 GET {{baseUrl}}/api/categories
+
+###
+POST {{baseUrl}}/api/random
+Content-Type: application/json
+Accept: application/json
+
+# {
+#   "mode": "meal",
+#   "meal_type": "rice"
+# }
+
+# {
+#   "mode": "meal",
+#   "meal_type": "one_dish"
+# }
+
+# {
+#   "mode": "meal",
+#   "meal_type": "auto"
+# }
+
+# {
+#   "mode": "single",
+#   "category_id": "1"
+# }
+
+{
+  "mode": "single",
+  "dish_ids": ["74", "75", "79"]
+}
