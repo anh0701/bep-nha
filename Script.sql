@@ -158,6 +158,32 @@ WHERE table_schema = 'public'
   AND table_name = 'cooking_records'
 ORDER BY ordinal_position;
 
+-- 
+
+-- Bảng lưu các thực đơn đã random thành công
+CREATE TABLE IF NOT EXISTS menus (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    dish_signature TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Bảng liên kết thực đơn với các món ăn
+CREATE TABLE IF NOT EXISTS menu_dishes (
+    menu_id BIGINT NOT NULL
+        REFERENCES menus(id) ON DELETE CASCADE,
+    dish_id BIGINT NOT NULL
+        REFERENCES dishes(id),
+    position INTEGER NOT NULL CHECK (position > 0),
+
+    PRIMARY KEY (menu_id, dish_id),
+    UNIQUE (menu_id, position)
+);
+
+-- Hỗ trợ truy vấn thực đơn theo món ăn
+CREATE INDEX IF NOT EXISTS idx_menu_dishes_dish_id
+    ON menu_dishes (dish_id);
+
+
 /*
  * chạy dữ liệu cho món ăn
  * 

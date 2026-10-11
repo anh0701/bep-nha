@@ -8,6 +8,8 @@ import {
 
 import type { RandomDishCandidate } from '../repositories/dish.repository.js'
 
+import { saveMenu } from '../repositories/menu.repository.js'
+
 export async function getAllDishes() {
   return findAllDishes()
 }
@@ -72,6 +74,24 @@ function pickDish(
   dishes: RandomDishCandidate[],
 ): RandomDishCandidate | null {
   return weightedPick(dishes, getDishWeight)
+}
+
+
+
+async function saveMealResult<
+  T extends { id: string },
+  R extends {
+    mode: 'meal'
+    items: T[]
+  },
+>(result: R): Promise<R> {
+  if (result.items.length === 0) {
+    return result
+  }
+
+  await saveMenu(result.items.map((dish) => dish.id))
+
+  return result
 }
 
 export async function randomize(options: RandomOptions) {
@@ -153,11 +173,11 @@ export async function randomize(options: RandomOptions) {
       }
     }
 
-    return {
+    return saveMealResult({
       mode: 'meal' as const,
       mealType: 'one_dish' as const,
       items: [selected],
-    }
+    })
   }
 
   const main = pickDish(
@@ -181,11 +201,11 @@ export async function randomize(options: RandomOptions) {
   const sides = dishes.filter((dish) => dish.meal_role === 'side')
   const side = Math.random() < 0.5 ? pickDish(sides) : null
 
-  return {
+  return saveMealResult({
     mode: 'meal' as const,
     mealType: 'rice' as const,
     rice: true,
     items: [main, vegetable, soup, ...(side ? [side] : [])],
-  }
+  })
 }
 

@@ -29,6 +29,18 @@ flowchart TD
 - Không tạo bữa thiếu thành phần: nếu chọn bữa cơm mà dữ liệu chưa đủ món chính, rau hoặc canh, hệ thống phải thông báo thiếu lựa chọn thay vì tự bịa món.
 - Chỉ ghi lịch sử khi thực sự nấu: kết quả Random chưa phải bản ghi nấu ăn. Người dùng cần xác nhận đã nấu thì mới thêm vào thống kê.
 
+### Lich su nau an
+
+- Lịch tháng: hiển thị tên món trong từng ô ngày; nếu có nhiều món thì hiển thị một vài món và dòng +N món.
+
+- Bấm vào một ngày: xem tất cả món đã nấu trong ngày đó.
+
+- Danh sách bên dưới: hiển thị các ngày có nấu ăn, ngày mới nhất trước; không liệt kê những ngày trống.
+
+- Chọn tháng khác: cả lịch và danh sách cùng thay đổi theo tháng đang xem.
+
+- Thêm hoặc sửa lịch sử: cho phép chọn ngày thực tế đã nấu, kể cả khi xác nhận muộn.
+
 ## Danh sach API
 
 | Method | Endpoint | Chức năng |

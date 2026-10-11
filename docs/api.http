@@ -88,3 +88,9 @@ Accept: application/json
   "mode": "single",
   "dish_ids": ["74", "75", "79"]
 }
+
+###
+GET {{baseUrl}}/api/menus
+
+###
+GET {{baseUrl}}/api/menus/1
