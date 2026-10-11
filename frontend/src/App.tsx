@@ -6,6 +6,7 @@ import Header from './components/layout/Header'
 import MobileNav from './components/layout/MobileNav'
 import HomePage from './pages/HomePage'
 import DishesPage from './pages/DishesPage'
+import RandomPage from './pages/RandomPage'
 
 function ComingSoonPage() {
   return (
@@ -22,16 +23,16 @@ function ComingSoonPage() {
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-cream md:flex">
+    <div className="h-screen overflow-hidden bg-cream md:flex">
       <Sidebar />
 
-      <main className="min-w-0 flex-1 pb-24 md:pb-8">
+      <main className="min-w-0 flex-1 overflow-y-auto pb-24 md:pb-8">
         <Header />
 
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/dishes" element={<DishesPage />} />
-          <Route path="/random" element={<ComingSoonPage />} />
+          <Route path="/random" element={<RandomPage />} />
           <Route path="/meal-plan" element={<ComingSoonPage />} />
           <Route path="/history" element={<ComingSoonPage />} />
           <Route path="/statistics" element={<ComingSoonPage />} />

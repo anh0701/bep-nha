@@ -44,25 +44,45 @@ POST {{baseUrl}}/api/random
 Content-Type: application/json
 Accept: application/json
 
-# {
-#   "mode": "meal",
-#   "meal_type": "rice"
-# }
+{
+  "mode": "meal",
+  "meal_type": "rice"
+}
 
-# {
-#   "mode": "meal",
-#   "meal_type": "one_dish"
-# }
+###
+POST {{baseUrl}}/api/random
+Content-Type: application/json
+Accept: application/json
 
-# {
-#   "mode": "meal",
-#   "meal_type": "auto"
-# }
+{
+  "mode": "meal",
+  "meal_type": "one_dish"
+}
 
-# {
-#   "mode": "single",
-#   "category_id": "1"
-# }
+###
+POST {{baseUrl}}/api/random
+Content-Type: application/json
+Accept: application/json
+
+{
+  "mode": "meal",
+  "meal_type": "auto"
+}
+
+###
+POST {{baseUrl}}/api/random
+Content-Type: application/json
+Accept: application/json
+
+{
+  "mode": "single",
+  "category_id": "1"
+}
+
+###
+POST {{baseUrl}}/api/random
+Content-Type: application/json
+Accept: application/json
 
 {
   "mode": "single",

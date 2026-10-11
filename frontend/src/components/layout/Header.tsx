@@ -3,7 +3,7 @@ import { CalendarDays, ChefHat, CookingPot } from 'lucide-react'
 
 export default function Header() {
   return (
-    <header className="flex items-center justify-between border-b border-beige/80 px-5 py-4 md:px-10 md:py-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-beige/80 bg-cream/95 px-5 py-4 backdrop-blur-sm md:px-10 md:py-6">
       <div className="flex items-center gap-3 md:hidden">
         <div className="flex size-10 items-center justify-center rounded-xl bg-forest text-white">
           <CookingPot size={22} />

@@ -22,7 +22,7 @@ const navigation = [
 
 export default function Sidebar() {
     return (
-        <aside className="hidden min-h-screen w-64 shrink-0 flex-col border-r border-beige bg-white/60 p-6 md:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-beige bg-white/60 p-6 md:flex">
             <a href="#" className="mb-10 flex items-center gap-3">
                 <div className="flex size-11 items-center justify-center rounded-2xl bg-forest text-white">
                     <CookingPot size={25} />
