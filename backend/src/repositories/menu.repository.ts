@@ -1,4 +1,4 @@
-
+import { randomUUID } from 'node:crypto'
 import { pool } from '../db/pool.js'
 
 export interface SavedMenu {
@@ -111,7 +111,10 @@ export interface SavedMenuDish {
 
 export interface SavedMenuWithDishes {
   id: string
+  name: string | null
+  source: 'random' | 'manual'
   created_at: Date
+  updated_at: Date
   items: SavedMenuDish[]
 }
 
@@ -120,6 +123,9 @@ export async function findAllSavedMenus(): Promise<SavedMenuWithDishes[]> {
     SELECT
       m.id::text AS id,
       m.created_at,
+      m.name,
+      m.source,
+      m.updated_at,
       COALESCE(
         json_agg(
           json_build_object(
@@ -140,7 +146,7 @@ export async function findAllSavedMenus(): Promise<SavedMenuWithDishes[]> {
     LEFT JOIN categories c
       ON c.id = d.category_id
     GROUP BY m.id, m.created_at
-    ORDER BY m.created_at DESC, m.id DESC
+    ORDER BY m.created_at DESC, m.id DESC, m.name, m.source, m.updated_at
   `)
 
   return result.rows
@@ -155,6 +161,9 @@ export async function findSavedMenuById(
     SELECT
       m.id::text AS id,
       m.created_at,
+      m.name,
+      m.source,
+      m.updated_at,
       COALESCE(
         json_agg(
           json_build_object(
@@ -175,10 +184,222 @@ export async function findSavedMenuById(
     LEFT JOIN categories c
       ON c.id = d.category_id
     WHERE m.id = $1::bigint
-    GROUP BY m.id, m.created_at
+    GROUP BY m.id, m.name, m.source, m.created_at, m.updated_at
     `,
     [id],
   )
 
   return result.rows[0] ?? null
+}
+
+
+export interface CreateManualMenuResult {
+  id: string
+  name: string
+  source: 'manual'
+  created_at: Date
+  updated_at: Date
+}
+
+export async function createManualMenu(
+  name: string,
+  dishIds: string[],
+): Promise<CreateManualMenuResult> {
+  const menuName = name.trim()
+  const orderedIds = [...new Set(dishIds)]
+
+  if (!menuName) {
+    throw new Error('Tên thực đơn không được để trống.')
+  }
+
+  if (menuName.length > 100) {
+    throw new Error('Tên thực đơn không được vượt quá 100 ký tự.')
+  }
+
+  if (orderedIds.length === 0) {
+    throw new Error('Thực đơn phải có ít nhất một món.')
+  }
+
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    // Chỉ cho phép thêm món đang hoạt động.
+    const dishResult = await client.query<{ id: string }>(
+      `
+      SELECT id::text AS id
+      FROM dishes
+      WHERE id = ANY($1::bigint[])
+        AND is_active = TRUE
+      `,
+      [orderedIds],
+    )
+
+    if (dishResult.rows.length !== orderedIds.length) {
+      throw new Error(
+        'Một hoặc nhiều món không tồn tại hoặc đã ngừng hoạt động.',
+      )
+    }
+
+    // Giá trị riêng giúp không va chạm với chữ ký của menu random.
+    const signature = `manual:${randomUUID()}`
+
+    const menuResult = await client.query<CreateManualMenuResult>(
+      `
+      INSERT INTO menus (
+        name,
+        source,
+        dish_signature
+      )
+      VALUES ($1, 'manual', $2)
+      RETURNING
+        id::text AS id,
+        name,
+        source,
+        created_at,
+        updated_at
+      `,
+      [menuName, signature],
+    )
+
+    const menu = menuResult.rows[0]
+
+    for (const [index, dishId] of orderedIds.entries()) {
+      await client.query(
+        `
+        INSERT INTO menu_dishes (
+          menu_id,
+          dish_id,
+          position
+        )
+        VALUES ($1, $2, $3)
+        `,
+        [menu.id, dishId, index + 1],
+      )
+    }
+
+    await client.query('COMMIT')
+
+    return menu
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+
+export async function updateManualMenu(
+  id: string,
+  name: string,
+  dishIds: string[],
+): Promise<CreateManualMenuResult | null> {
+  const menuName = name.trim()
+  const orderedIds = [...new Set(dishIds)]
+
+  if (!menuName || menuName.length > 100) {
+    throw new Error('Tên thực đơn phải có từ 1 đến 100 ký tự.')
+  }
+
+  if (orderedIds.length === 0) {
+    throw new Error('Thực đơn phải có ít nhất một món.')
+  }
+
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const existing = await client.query(
+      `
+      SELECT id
+      FROM menus
+      WHERE id = $1::bigint
+        AND source = 'manual'
+      FOR UPDATE
+      `,
+      [id],
+    )
+
+    if (existing.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    const dishResult = await client.query<{ id: string }>(
+      `
+      SELECT id::text AS id
+      FROM dishes
+      WHERE id = ANY($1::bigint[])
+        AND is_active = TRUE
+      `,
+      [orderedIds],
+    )
+
+    if (dishResult.rows.length !== orderedIds.length) {
+      throw new Error(
+        'Một hoặc nhiều món không tồn tại hoặc đã ngừng hoạt động.',
+      )
+    }
+
+    const menuResult = await client.query<CreateManualMenuResult>(
+      `
+      UPDATE menus
+      SET name = $2,
+          updated_at = NOW()
+      WHERE id = $1::bigint
+        AND source = 'manual'
+      RETURNING
+        id::text AS id,
+        name,
+        source,
+        created_at,
+        updated_at
+      `,
+      [id, menuName],
+    )
+
+    await client.query(
+      'DELETE FROM menu_dishes WHERE menu_id = $1::bigint',
+      [id],
+    )
+
+    for (const [index, dishId] of orderedIds.entries()) {
+      await client.query(
+        `
+        INSERT INTO menu_dishes (menu_id, dish_id, position)
+        VALUES ($1, $2, $3)
+        `,
+        [id, dishId, index + 1],
+      )
+    }
+
+    await client.query('COMMIT')
+
+    return menuResult.rows[0]
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+
+export async function deleteManualMenu(
+  id: string,
+): Promise<boolean> {
+  const result = await pool.query(
+    `
+    DELETE FROM menus
+    WHERE id = $1::bigint
+      AND source = 'manual'
+    RETURNING id
+    `,
+    [id],
+  )
+
+  return result.rowCount === 1
 }

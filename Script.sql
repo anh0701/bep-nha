@@ -229,6 +229,32 @@ CREATE TABLE IF NOT EXISTS cooking_session_dishes (
 CREATE INDEX IF NOT EXISTS idx_cooking_session_dishes_dish_id
     ON cooking_session_dishes (dish_id);
 
+select d.* from dishes d where d.is_active = false ;
+
+
+BEGIN;
+
+-- 1. Thêm thông tin nguồn và thời gian cập nhật.
+ALTER TABLE menus
+    ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'random',
+    ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- 2. Kiểm soát các giá trị source hợp lệ.
+ALTER TABLE menus
+    ADD CONSTRAINT menus_source_check
+    CHECK (source IN ('random', 'manual'));
+
+-- 3. Bỏ ràng buộc UNIQUE cũ trên dish_signature.
+-- Tên mặc định PostgreSQL thường tạo là menus_dish_signature_key.
+ALTER TABLE menus
+    DROP CONSTRAINT menus_dish_signature_key;
+
+-- 4. Chỉ yêu cầu chữ ký duy nhất đối với thực đơn random.
+CREATE UNIQUE INDEX menus_random_signature_unique
+    ON menus (dish_signature)
+    WHERE source = 'random';
+
+COMMIT;
 
 -----------------------------------------------------------------------------------------
 

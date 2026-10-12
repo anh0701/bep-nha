@@ -54,3 +54,19 @@ flowchart TD
 | GET | /api/cooking-sessions/calendar?month=2026-10 | Lấy các món đã nấu trong tháng, không trùng món trong cùng ngày |
 | GET | /api/cooking-sessions/by-date?date=2026-10-12 | Lấy từng lần nấu trong ngày, gồm giờ nấu và danh sách món |
 | POST | /api/cooking-sessions | Ghi nhận một lần nấu |
+
+### API tạo thực đơn
+
+POST tạo menus từ random
+
+- Nhận danh sách ID món từ chức năng random.
+- Tạo dish_signature từ tập hợp ID đã chuẩn hóa.
+- Nếu chữ ký đã tồn tại, trả về thực đơn cũ như hiện tại.
+- Không nhất thiết phải có tên do người dùng đặt.
+
+POST /api/menus
+
+- Nhận tên thực đơn và danh sách ID món.
+- Tạo một thực đơn mới, kể cả khi danh sách món trùng thực đơn khác.
+- Không dùng dish_signature để tái sử dụng thực đơn.
+- Có thể sửa tên, thêm hoặc bỏ món về sau.

@@ -135,3 +135,26 @@ Content-Type: application/json
 
 ###
 DELETE {{baseUrl}}/api/cooking-sessions/1
+
+###
+POST {{baseUrl}}/api/menus
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Bữa cơm gia đình",
+  "dishIds": ["12", "25", "31"]
+}
+
+###
+PUT {{baseUrl}}/api/menus/4
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Bữa cơm gia đình cuối tuần",
+  "dishIds": ["12", "31"]
+}
+
+###
+DELETE {{baseUrl}}/api/menus/4

@@ -8,7 +8,10 @@ export interface SavedMenuDish {
 
 export interface SavedMenu {
   id: string
+  name: string | null
+  source: 'random' | 'manual'
   created_at: string
+  updated_at: string
   items: SavedMenuDish[]
 }
 
@@ -19,6 +22,13 @@ export interface MenusResponse {
 export interface MenuResponse {
   data: SavedMenu
 }
+
+export interface CreateManualMenuInput {
+  name: string
+  dishIds: string[]
+}
+
+export type UpdateManualMenuInput = CreateManualMenuInput
 
 export interface CreateCookingSessionInput {
   dishIds: string[]
