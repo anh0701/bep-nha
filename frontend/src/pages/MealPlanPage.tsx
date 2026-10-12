@@ -1,12 +1,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import {
-    ArrowLeft,
     CalendarDays,
     Check,
     ChefHat,
-    Clock,
-    CookingPot,
     LoaderCircle,
     Utensils,
 } from 'lucide-react'
@@ -14,29 +12,17 @@ import {
 import type {
     CreateManualMenuInput,
     SavedMenu,
-    SavedMenuDish,
 } from '../types/menu'
+import type { Dish } from '../types/dish'
 
 import {
     getSavedMenus,
-    getSavedMenuById,
-    updateManualMenu,
     createManualMenu,
+    updateManualMenu,
     deleteManualMenu,
 } from '../services/menu.service'
-
-import { createCookingSession, getCookedDishIds } from '../services/cooking.service'
 import { getDishes } from '../services/dish.service'
-import type { Dish } from '../types/dish'
-
-function getLocalDateTime(): string {
-    const now = new Date()
-    const localDate = new Date(
-        now.getTime() - now.getTimezoneOffset() * 60_000,
-    )
-
-    return localDate.toISOString().slice(0, 16)
-}
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 
 function formatDate(value: string): string {
     return new Date(value).toLocaleDateString('vi-VN', {
@@ -46,48 +32,13 @@ function formatDate(value: string): string {
     })
 }
 
-function formatDateTime(value: string): string {
-    return new Date(value).toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
-}
-
-type CookingTarget =
-    | {
-        type: 'dish'
-        dish: SavedMenuDish
-    }
-    | {
-        type: 'menu'
-        menu: SavedMenu
-    }
-
 export default function MealPlanPage() {
+    const navigate = useNavigate()
+
     const [menus, setMenus] = useState<SavedMenu[]>([])
-    const [selectedMenu, setSelectedMenu] = useState<SavedMenu | null>(null)
-
     const [isLoading, setIsLoading] = useState(true)
-    const [isDetailLoading, setIsDetailLoading] = useState(false)
-    const [isSaving, setIsSaving] = useState(false)
-
     const [error, setError] = useState('')
     const [notice, setNotice] = useState('')
-
-    const [cookingTarget, setCookingTarget] =
-        useState<CookingTarget | null>(null)
-
-    const [cookedAt, setCookedAt] = useState(getLocalDateTime())
-
-    const [cookedDishIds, setCookedDishIds] = useState<Set<string>>(
-        () => new Set(),
-    )
-
-    const [isCookedStatusLoading, setIsCookedStatusLoading] =
-        useState(true)
 
     const [isMenuFormOpen, setIsMenuFormOpen] = useState(false)
     const [editingMenu, setEditingMenu] = useState<SavedMenu | null>(null)
@@ -97,6 +48,10 @@ export default function MealPlanPage() {
     const [isDishLoading, setIsDishLoading] = useState(false)
     const [isMenuSubmitting, setIsMenuSubmitting] = useState(false)
     const [deletingMenuId, setDeletingMenuId] = useState<string | null>(null)
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [menuToDelete, setMenuToDelete] = useState<SavedMenu | null>(null)
+    const [deleteError, setDeleteError] = useState<string | null>(null)
 
     const loadMenus = useCallback(async () => {
         setIsLoading(true)
@@ -119,26 +74,6 @@ export default function MealPlanPage() {
     useEffect(() => {
         void loadMenus()
     }, [loadMenus])
-
-    async function openMenu(menu: SavedMenu) {
-        setSelectedMenu(menu)
-        setIsDetailLoading(true)
-        setError('')
-        setNotice('')
-
-        try {
-            const response = await getSavedMenuById(menu.id)
-            setSelectedMenu(response.data)
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : 'Không thể tải chi tiết thực đơn.',
-            )
-        } finally {
-            setIsDetailLoading(false)
-        }
-    }
 
     async function openMenuForm(menu?: SavedMenu) {
         setError('')
@@ -224,137 +159,44 @@ export default function MealPlanPage() {
         }
     }
 
-    async function handleDeleteMenu(menu: SavedMenu) {
-        if (menu.source !== 'manual') return
+    function openDeleteModal(menu: SavedMenu) {
+        if (menu.source !== 'manual' || deletingMenuId !== null) return
 
-        const confirmed = window.confirm(
-            `Bạn có chắc muốn xóa thực đơn "${menu.name || `Thực đơn #${menu.id}`}"?`,
-        )
+        setMenuToDelete(menu)
+        setDeleteError(null)
+        setIsDeleteModalOpen(true)
+    }
 
-        if (!confirmed) return
+    async function handleDeleteMenu() {
+        if (
+            !menuToDelete ||
+            menuToDelete.source !== 'manual' ||
+            deletingMenuId !== null
+        ) {
+            return
+        }
+
+        const menu = menuToDelete
 
         setDeletingMenuId(menu.id)
-        setError('')
-        setNotice('')
+        setDeleteError(null)
 
         try {
             await deleteManualMenu(menu.id)
 
-            if (selectedMenu?.id === menu.id) {
-                setSelectedMenu(null)
-            }
+            setIsDeleteModalOpen(false)
+            setMenuToDelete(null)
+            setNotice(`Đã xóa thực đơn "${menu.name || `Thực đơn #${menu.id}`}".`)
 
-            setNotice('Đã xóa thực đơn.')
             await loadMenus()
         } catch (err) {
-            setError(
+            setDeleteError(
                 err instanceof Error
                     ? err.message
                     : 'Không thể xóa thực đơn.',
             )
         } finally {
             setDeletingMenuId(null)
-        }
-    }
-
-    useEffect(() => {
-        let cancelled = false
-
-        async function loadCookedDishIds() {
-            setIsCookedStatusLoading(true)
-
-            try {
-                const ids = await getCookedDishIds()
-
-                if (!cancelled) {
-                    setCookedDishIds(new Set(ids))
-                }
-            } catch (err) {
-                if (!cancelled) {
-                    setError(
-                        err instanceof Error
-                            ? err.message
-                            : 'Không thể tải trạng thái món đã nấu.',
-                    )
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsCookedStatusLoading(false)
-                }
-            }
-        }
-
-        void loadCookedDishIds()
-
-        return () => {
-            cancelled = true
-        }
-    }, [])
-
-    function openCookingDialog(target: CookingTarget) {
-        setCookingTarget(target)
-        setCookedAt(getLocalDateTime())
-        setError('')
-        setNotice('')
-    }
-
-    async function confirmCook() {
-        if (!cookingTarget || !cookedAt || isSaving) return
-
-        const dishIds =
-            cookingTarget.type === 'dish'
-                ? [cookingTarget.dish.id]
-                : cookingTarget.menu.items.map((dish) => dish.id)
-
-        if (dishIds.length === 0) {
-            setError('Thực đơn này chưa có món ăn.')
-            return
-        }
-
-        const selectedTime = new Date(cookedAt)
-
-        if (Number.isNaN(selectedTime.getTime())) {
-            setError('Thời gian nấu không hợp lệ.')
-            return
-        }
-
-        if (selectedTime.getTime() > Date.now()) {
-            setError('Thời gian nấu không thể ở tương lai.')
-            return
-        }
-
-        setIsSaving(true)
-        setError('')
-
-        try {
-            await createCookingSession({
-                dishIds,
-                cookedAt: selectedTime.toISOString(),
-            })
-
-            const successMessage =
-                cookingTarget.type === 'dish'
-                    ? `Đã ghi nhận món "${cookingTarget.dish.name}" vào lịch sử nấu ăn.`
-                    : `Đã ghi nhận ${dishIds.length} món trong thực đơn vào lịch sử nấu ăn.`
-
-            setCookedDishIds((previous) => {
-                const next = new Set(previous)
-
-                dishIds.forEach((id) => next.add(id))
-
-                return next
-            })
-
-            setNotice(successMessage)
-            setCookingTarget(null)
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : 'Không thể lưu lịch sử nấu ăn.',
-            )
-        } finally {
-            setIsSaving(false)
         }
     }
 
@@ -374,22 +216,18 @@ export default function MealPlanPage() {
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-muted">
-                        Xem lại những thực đơn đã lưu, chọn món muốn nấu
+                        Xem lại những thực đơn đã lưu, tạo thực đơn riêng
                         và ghi lại hành trình nấu ăn của bạn.
                     </p>
 
-
-                    <div className="mt-5">
-                        <button
-                            type="button"
-                            onClick={() => void openMenuForm()}
-                            className="inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
-                        >
-                            <Utensils size={18} />
-                            Tạo thực đơn
-                        </button>
-                    </div>
-
+                    <button
+                        type="button"
+                        onClick={() => void openMenuForm()}
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90"
+                    >
+                        <Utensils size={18} />
+                        Tạo thực đơn
+                    </button>
                 </header>
 
                 {notice && (
@@ -397,7 +235,10 @@ export default function MealPlanPage() {
                         role="status"
                         className="mb-6 flex items-start gap-3 rounded-xl border border-sage bg-white p-4"
                     >
-                        <Check className="mt-0.5 shrink-0 text-forest" size={20} />
+                        <Check
+                            className="mt-0.5 shrink-0 text-forest"
+                            size={20}
+                        />
                         <p className="text-sm">{notice}</p>
                         <button
                             type="button"
@@ -430,121 +271,10 @@ export default function MealPlanPage() {
                         <LoaderCircle className="animate-spin" size={22} />
                         <span>Đang tải thực đơn...</span>
                     </div>
-                ) : selectedMenu ? (
-                    <section>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSelectedMenu(null)
-                                setError('')
-                                setNotice('')
-                            }}
-                            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-forest hover:underline"
-                        >
-                            <ArrowLeft size={18} />
-                            Quay lại danh sách
-                        </button>
-
-                        <div className="rounded-2xl border border-beige bg-white p-5 sm:p-8">
-
-                            <div className="flex flex-wrap gap-2">
-                                {selectedMenu.source === 'manual' && (
-                                    <button
-                                        type="button"
-                                        onClick={() => void openMenuForm(selectedMenu)}
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-beige px-5 py-3 font-semibold transition hover:border-forest hover:text-forest"
-                                    >
-                                        Sửa thực đơn
-                                    </button>
-                                )}
-
-                                <button
-                                    type="button"
-                                    disabled={
-                                        isDetailLoading ||
-                                        selectedMenu.items.length === 0
-                                    }
-                                    onClick={() =>
-                                        openCookingDialog({
-                                            type: 'menu',
-                                            menu: selectedMenu,
-                                        })
-                                    }
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <CookingPot size={19} />
-                                    Nấu cả thực đơn
-                                </button>
-                            </div>
-
-
-                            {isDetailLoading ? (
-                                <div className="flex items-center justify-center gap-2 py-12 text-muted">
-                                    <LoaderCircle className="animate-spin" size={20} />
-                                    Đang tải chi tiết...
-                                </div>
-                            ) : selectedMenu.items.length === 0 ? (
-                                <p className="py-10 text-center text-muted">
-                                    Thực đơn này chưa có món ăn.
-                                </p>
-                            ) : (
-                                <div className="mt-8 divide-y divide-beige">
-                                    {selectedMenu.items.map((dish, index) => (
-                                        <article
-                                            key={dish.id}
-                                            className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                                        >
-                                            <div className="flex min-w-0 items-start gap-4">
-                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage text-forest">
-                                                    <span className="font-bold">{index + 1}</span>
-                                                </div>
-
-                                                <div className="min-w-0">
-                                                    <h3 className="font-semibold">{dish.name}</h3>
-                                                    <p className="mt-1 text-sm text-muted">
-                                                        {dish.category}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                disabled={isCookedStatusLoading}
-                                                onClick={() =>
-                                                    openCookingDialog({
-                                                        type: 'dish',
-                                                        dish,
-                                                    })
-                                                }
-                                                className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-beige px-4 py-2 text-sm font-semibold transition hover:border-forest hover:text-forest disabled:cursor-wait disabled:opacity-60 sm:self-auto"
-                                            >
-                                                {isCookedStatusLoading ? (
-                                                    <>
-                                                        <LoaderCircle size={17} className="animate-spin" />
-                                                        Đang tải...
-                                                    </>
-                                                ) : cookedDishIds.has(dish.id) ? (
-                                                    <>
-                                                        <Check size={17} />
-                                                        Nấu lại
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Check size={17} />
-                                                        Đánh dấu đã nấu
-                                                    </>
-                                                )}
-                                            </button>
-                                        </article>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </section>
                 ) : menus.length === 0 ? (
                     <div className="rounded-2xl border border-beige bg-white px-5 py-16 text-center">
                         <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-sage text-forest">
-                            <CookingPot size={30} />
+                            <Utensils size={30} />
                         </div>
 
                         <h2 className="mt-5 text-xl font-bold">
@@ -552,13 +282,13 @@ export default function MealPlanPage() {
                         </h2>
 
                         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
-                            Hãy vào trang Chọn món ngẫu nhiên và tạo một thực đơn
-                            để lưu lại tại đây.
+                            Tạo thực đơn của riêng bạn hoặc vào trang chọn món
+                            ngẫu nhiên để bắt đầu.
                         </p>
 
                         <a
                             href="/random"
-                            className="mt-6 inline-flex rounded-xl bg-forest px-5 py-3 font-semibold text-white hover:opacity-90"
+                            className="mt-6 inline-flex rounded-xl border border-beige px-5 py-3 font-semibold hover:border-forest hover:text-forest"
                         >
                             Đến trang chọn món
                         </a>
@@ -612,6 +342,12 @@ export default function MealPlanPage() {
                                         {formatDate(menu.created_at)}
                                     </p>
 
+                                    <p className="mt-2 text-xs text-muted">
+                                        {menu.source === 'manual'
+                                            ? 'Thực đơn tự tạo'
+                                            : 'Thực đơn ngẫu nhiên'}
+                                    </p>
+
                                     <div className="mt-4 flex-1">
                                         {menu.items.length > 0 ? (
                                             <ul className="space-y-2">
@@ -620,7 +356,9 @@ export default function MealPlanPage() {
                                                         key={dish.id}
                                                         className="truncate text-sm"
                                                     >
-                                                        <span className="mr-2 text-forest">•</span>
+                                                        <span className="mr-2 text-forest">
+                                                            •
+                                                        </span>
                                                         {dish.name}
                                                     </li>
                                                 ))}
@@ -638,7 +376,6 @@ export default function MealPlanPage() {
                                         )}
                                     </div>
 
-
                                     {menu.source === 'manual' && (
                                         <div className="mt-5 flex gap-2">
                                             <button
@@ -651,23 +388,23 @@ export default function MealPlanPage() {
 
                                             <button
                                                 type="button"
-                                                disabled={deletingMenuId === menu.id}
-                                                onClick={() => void handleDeleteMenu(menu)}
+                                                disabled={deletingMenuId !== null}
+                                                onClick={() => openDeleteModal(menu)}
                                                 className="flex-1 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
                                             >
-                                                {deletingMenuId === menu.id ? 'Đang xóa...' : 'Xóa'}
+                                                Xóa
                                             </button>
                                         </div>
                                     )}
 
-
                                     <button
                                         type="button"
-                                        onClick={() => void openMenu(menu)}
-                                        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-beige px-4 py-3 text-sm font-semibold transition hover:border-forest hover:text-forest"
+                                        onClick={() =>
+                                            navigate(`/meal-plan/${encodeURIComponent(menu.id)}`)
+                                        }
+                                        className="mt-5 w-full rounded-xl border border-beige px-4 py-3 text-sm font-semibold transition hover:border-forest hover:text-forest"
                                     >
-                                        Xem chi tiết
-                                        <ArrowLeft className="rotate-180" size={16} />
+                                        Xem chi tiết →
                                     </button>
                                 </article>
                             ))}
@@ -676,15 +413,16 @@ export default function MealPlanPage() {
                 )}
             </div>
 
-            {cookingTarget && (
+            {isMenuFormOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
                     onMouseDown={(event) => {
                         if (
                             event.target === event.currentTarget &&
-                            !isSaving
+                            !isMenuSubmitting
                         ) {
-                            setCookingTarget(null)
+                            setIsMenuFormOpen(false)
+                            setEditingMenu(null)
                             setError('')
                         }
                     }}
@@ -692,123 +430,10 @@ export default function MealPlanPage() {
                     <section
                         role="dialog"
                         aria-modal="true"
-                        aria-labelledby="cooking-dialog-title"
-                        className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl"
-                    >
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <div className="flex size-11 items-center justify-center rounded-xl bg-sage text-forest">
-                                    <CookingPot size={23} />
-                                </div>
-
-                                <h2
-                                    id="cooking-dialog-title"
-                                    className="mt-4 text-xl font-bold"
-                                >
-                                    Xác nhận đã nấu
-                                </h2>
-
-                                <p className="mt-2 text-sm leading-6 text-muted">
-                                    {cookingTarget.type === 'dish'
-                                        ? `Ghi nhận "${cookingTarget.dish.name}" vào lịch sử nấu ăn.`
-                                        : `Ghi nhận ${cookingTarget.menu.items.length} món trong thực đơn #${cookingTarget.menu.id}.`}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                disabled={isSaving}
-                                onClick={() => {
-                                    setCookingTarget(null)
-                                    setError('')
-                                }}
-                                aria-label="Đóng hộp thoại"
-                                className="rounded-lg p-2 text-muted hover:bg-cream disabled:opacity-50"
-                            >
-                                <span className="text-xl">×</span>
-                            </button>
-                        </div>
-
-                        <label
-                            htmlFor="cooked-at"
-                            className="mt-6 flex items-center gap-2 text-sm font-semibold"
-                        >
-                            <Clock size={17} />
-                            Ngày và giờ nấu
-                        </label>
-
-                        <input
-                            id="cooked-at"
-                            type="datetime-local"
-                            value={cookedAt}
-                            max={getLocalDateTime()}
-                            onChange={(event) => setCookedAt(event.target.value)}
-                            disabled={isSaving}
-                            className="mt-2 w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm outline-none focus:border-forest disabled:opacity-50"
-                        />
-
-                        {error && (
-                            <p role="alert" className="mt-3 text-sm text-red-600">
-                                {error}
-                            </p>
-                        )}
-
-                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button
-                                type="button"
-                                disabled={isSaving}
-                                onClick={() => {
-                                    setCookingTarget(null)
-                                    setError('')
-                                }}
-                                className="rounded-xl border border-beige px-4 py-3 text-sm font-semibold hover:bg-cream disabled:opacity-50"
-                            >
-                                Hủy
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={isSaving || !cookedAt}
-                                onClick={() => void confirmCook()}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <LoaderCircle className="animate-spin" size={17} />
-                                        Đang lưu...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check size={17} />
-                                        Xác nhận đã nấu
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        {cookingTarget.type === 'menu' && (
-                            <p className="mt-4 text-xs leading-5 text-muted">
-                                Tất cả món trong thực đơn sẽ được ghi vào cùng một
-                                phiên nấu ăn tại thời điểm đã chọn.
-                            </p>
-                        )}
-                    </section>
-                </div>
-            )}
-
-
-            {isMenuFormOpen && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-                    <section
-                        role="dialog"
-                        aria-modal="true"
                         aria-labelledby="menu-form-title"
                         className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl sm:p-6"
                     >
-                        <h2
-                            id="menu-form-title"
-                            className="text-xl font-bold"
-                        >
+                        <h2 id="menu-form-title" className="text-xl font-bold">
                             {editingMenu ? 'Sửa thực đơn' : 'Tạo thực đơn'}
                         </h2>
 
@@ -843,10 +468,7 @@ export default function MealPlanPage() {
 
                         {isDishLoading ? (
                             <div className="flex items-center justify-center gap-2 py-10 text-muted">
-                                <LoaderCircle
-                                    size={20}
-                                    className="animate-spin"
-                                />
+                                <LoaderCircle size={20} className="animate-spin" />
                                 Đang tải danh sách món...
                             </div>
                         ) : availableDishes.length === 0 ? (
@@ -903,14 +525,13 @@ export default function MealPlanPage() {
                             >
                                 {isMenuSubmitting ? (
                                     <>
-                                        <LoaderCircle
-                                            size={17}
-                                            className="animate-spin"
-                                        />
+                                        <LoaderCircle size={17} className="animate-spin" />
                                         Đang lưu...
                                     </>
+                                ) : editingMenu ? (
+                                    'Lưu thay đổi'
                                 ) : (
-                                    editingMenu ? 'Lưu thay đổi' : 'Tạo thực đơn'
+                                    'Tạo thực đơn'
                                 )}
                             </button>
                         </div>
@@ -918,6 +539,33 @@ export default function MealPlanPage() {
                 </div>
             )}
 
+            {isDeleteModalOpen && menuToDelete && (
+                <ConfirmDeleteModal
+                    title="Xóa thực đơn?"
+                    description={
+                        <>
+                            Bạn có chắc muốn xóa thực đơn{' '}
+                            <strong>
+                                "{menuToDelete.name ||
+                                    `Thực đơn #${menuToDelete.id}`}"
+                            </strong>
+                            ? Thao tác này không thể hoàn tác.
+                        </>
+                    }
+                    confirmLabel="Xóa thực đơn"
+                    loadingLabel="Đang xóa..."
+                    isLoading={deletingMenuId === menuToDelete.id}
+                    error={deleteError}
+                    onConfirm={() => void handleDeleteMenu()}
+                    onCancel={() => {
+                        if (deletingMenuId !== null) return
+
+                        setIsDeleteModalOpen(false)
+                        setMenuToDelete(null)
+                        setDeleteError(null)
+                    }}
+                />
+            )}
         </main>
     )
 }
