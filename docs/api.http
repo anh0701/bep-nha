@@ -122,3 +122,16 @@ GET {{baseUrl}}/api/cooking-sessions/by-date?date=2026-10-12
 
 ###
 GET {{baseUrl}}/api/cooking-sessions/cooked-dishes
+
+###
+PUT {{baseUrl}}/api/cooking-sessions/1
+Accept: application/json
+Content-Type: application/json
+
+{
+  "dishIds": ["1", "3"],
+  "cookedAt": "2026-10-12T11:30:00+07:00"
+}
+
+###
+DELETE {{baseUrl}}/api/cooking-sessions/1

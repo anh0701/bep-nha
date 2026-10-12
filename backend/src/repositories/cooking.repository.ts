@@ -170,3 +170,84 @@ export async function findCookedDishIds(): Promise<string[]> {
 
   return result.rows.map((row) => row.dish_id)
 }
+
+
+export interface UpdateCookingSessionInput {
+  dishIds: string[]
+  cookedAt: string
+}
+
+export async function updateCookingSession(
+  id: string,
+  input: UpdateCookingSessionInput,
+): Promise<CookingSession | null> {
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const sessionResult = await client.query<CookingSession>(
+      `
+        UPDATE cooking_sessions
+        SET cooked_at = $2::timestamptz
+        WHERE id = $1::bigint
+        RETURNING
+          id::text AS id,
+          cooked_at,
+          created_at
+      `,
+      [id, input.cookedAt],
+    )
+
+    if (sessionResult.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    await client.query(
+      `
+        DELETE FROM cooking_session_dishes
+        WHERE session_id = $1::bigint
+      `,
+      [id],
+    )
+
+    for (const [index, dishId] of input.dishIds.entries()) {
+      await client.query(
+        `
+          INSERT INTO cooking_session_dishes (
+            session_id,
+            dish_id,
+            position
+          )
+          VALUES ($1::bigint, $2::bigint, $3)
+        `,
+        [id, dishId, index + 1],
+      )
+    }
+
+    await client.query('COMMIT')
+
+    return sessionResult.rows[0]
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export async function deleteCookingSession(
+  id: string,
+): Promise<boolean> {
+  const result = await pool.query(
+    `
+      DELETE FROM cooking_sessions
+      WHERE id = $1::bigint
+      RETURNING id
+    `,
+    [id],
+  )
+
+  return result.rowCount !== null && result.rowCount > 0
+}

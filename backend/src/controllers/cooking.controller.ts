@@ -1,7 +1,8 @@
-
 import type { Request, Response } from 'express'
-import { recordCooking } from '../services/cooking.service.js'
 import {
+  recordCooking,
+  updateCooking,
+  deleteCooking,
   getCookingCalendar as fetchCookingCalendar,
   getCookingSessionsByDate as fetchCookingSessionsByDate,
   getCookedDishIds as fetchCookedDishIds,
@@ -155,6 +156,118 @@ export async function getCookedDishIds(
     console.error('Failed to fetch cooked dish IDs:', error)
     res.status(500).json({
       message: 'Failed to fetch cooked dish IDs.',
+    })
+  }
+}
+
+export async function updateCookingSession(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = req.params
+  const { dishIds, cookedAt } = req.body ?? {}
+
+  if (
+    typeof id !== 'string' ||
+    !/^[1-9]\d*$/.test(id) ||
+    !Array.isArray(dishIds) ||
+    !dishIds.every((dishId) => typeof dishId === 'string') ||
+    typeof cookedAt !== 'string'
+  ) {
+    res.status(400).json({
+      message: 'Invalid request body or session ID.',
+    })
+    return
+  }
+
+  try {
+    const session = await updateCooking(id, {
+      dishIds,
+      cookedAt,
+    })
+
+    if (!session) {
+      res.status(404).json({
+        message: 'Cooking session not found.',
+      })
+      return
+    }
+
+    res.status(200).json({
+      data: session,
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      const validationErrors: Record<string, string> = {
+        INVALID_SESSION_ID: 'Invalid cooking session ID.',
+        DISH_IDS_REQUIRED: 'Please select at least one dish.',
+        DUPLICATE_DISH_IDS: 'Duplicate dish IDs are not allowed.',
+        INVALID_DISH_IDS: 'One or more dish IDs are invalid.',
+        INVALID_COOKED_AT: 'The cooking date or time is invalid.',
+      }
+
+      const message = validationErrors[error.message]
+
+      if (message) {
+        res.status(400).json({ message })
+        return
+      }
+    }
+
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === '23503'
+    ) {
+      res.status(400).json({
+        message: 'One or more selected dishes do not exist.',
+      })
+      return
+    }
+
+    console.error('Failed to update cooking session:', error)
+
+    res.status(500).json({
+      message: 'Failed to update cooking session.',
+    })
+  }
+}
+
+export async function deleteCookingSession(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = req.params
+
+  if (
+    typeof id !== 'string' ||
+    !/^[1-9]\d*$/.test(id)
+  ) {
+    res.status(400).json({
+      message: 'Invalid cooking session ID.',
+    })
+    return
+  }
+
+  try {
+    const deleted = await deleteCooking(id)
+
+    if (!deleted) {
+      res.status(404).json({
+        message: 'Cooking session not found.',
+      })
+      return
+    }
+
+    res.status(200).json({
+      message: 'Cooking session deleted successfully.',
+    })
+  } catch (error) {
+    console.error('Failed to delete cooking session:', error)
+
+    res.status(500).json({
+      message: 'Failed to delete cooking session.',
     })
   }
 }

@@ -6,6 +6,7 @@ import { getCategories } from '../services/category.service'
 import type { Dish, DishFormData } from '../types/dish'
 import type { Category } from '../types/category'
 import CategorySelect from '../components/CategorySelect'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 
 export default function DishesPage() {
   const [dishes, setDishes] = useState<Dish[]>([])
@@ -532,76 +533,24 @@ export default function DishesPage() {
 
 
       {dishToDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm"
-          onClick={() => {
-            if (deletingDishId === null) {
-              setDishToDelete(null)
-            }
-          }}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="delete-modal-title"
-            aria-describedby="delete-modal-description"
-            className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-beige bg-cream p-6 shadow-2xl duration-200 sm:p-7"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
-              <AlertTriangle size={24} strokeWidth={2} />
-            </div>
-
-            <h2
-              id="delete-modal-title"
-              className="mt-5 text-xl font-bold text-ink"
-            >
-              Xóa món ăn này?
-            </h2>
-
-            <p
-              id="delete-modal-description"
-              className="mt-2 text-sm leading-6 text-muted"
-            >
+        <ConfirmDeleteModal
+          title="Xóa món ăn này?"
+          description={
+            <>
               Bạn có chắc muốn xóa{' '}
               <span className="font-semibold text-ink">
                 {dishToDelete.name}
-              </span>
-              {' '}khỏi danh sách món ăn? Bạn sẽ không còn thấy món này trong danh
+              </span>{' '}
+              khỏi danh sách món ăn? Bạn sẽ không còn thấy món này trong danh
               mục đang hoạt động.
-            </p>
-
-            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                disabled={deletingDishId !== null}
-                onClick={() => setDishToDelete(null)}
-                className="rounded-xl border border-beige px-5 py-3 text-sm font-semibold text-ink transition-colors hover:bg-sage/60 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Hủy
-              </button>
-
-              <button
-                type="button"
-                disabled={deletingDishId !== null}
-                onClick={() => void handleDeleteDish(dishToDelete)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {deletingDishId === dishToDelete.id ? (
-                  <>
-                    <LoaderCircle size={16} className="animate-spin" />
-                    Đang xóa...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Xóa món ăn
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Xóa món ăn"
+          isLoading={deletingDishId !== null}
+          error={deleteError}
+          onCancel={() => setDishToDelete(null)}
+          onConfirm={() => void handleDeleteDish(dishToDelete)}
+        />
       )}
 
     </div>

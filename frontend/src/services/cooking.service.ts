@@ -86,3 +86,51 @@ export async function getCookedDishIds(): Promise<string[]> {
 
   return result.data as string[]
 }
+
+export interface UpdateCookingSessionInput {
+  dishIds: string[]
+  cookedAt: string
+}
+
+export async function updateCookingSession(
+  id: string,
+  input: UpdateCookingSessionInput,
+): Promise<CookingSession> {
+  const response = await fetch(
+    `${API_BASE_URL}/cooking-sessions/${encodeURIComponent(id)}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    },
+  )
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ?? `Failed to update cooking session: ${response.status}`,
+    )
+  }
+
+  return result.data as CookingSession
+}
+
+export async function deleteCookingSession(id: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/cooking-sessions/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+    },
+  )
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ?? `Failed to delete cooking session: ${response.status}`,
+    )
+  }
+}
