@@ -184,6 +184,54 @@ CREATE INDEX IF NOT EXISTS idx_menu_dishes_dish_id
     ON menu_dishes (dish_id);
 
 
+
+SELECT
+    table_name,
+    column_name,
+    data_type,
+    is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name IN ('menus', 'menu_dishes')
+ORDER BY table_name, ordinal_position;
+
+
+SELECT
+    COUNT(*) AS total_records,
+    COUNT(DISTINCT cooked_on) AS cooking_days,
+    MIN(cooked_on) AS first_cooking_date,
+    MAX(cooked_on) AS last_cooking_date
+FROM cooking_records;
+
+-- luu thoi gian nau an
+
+CREATE TABLE IF NOT EXISTS cooking_sessions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cooked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cooking_sessions_cooked_at
+    ON cooking_sessions (cooked_at);
+
+
+CREATE TABLE IF NOT EXISTS cooking_session_dishes (
+    session_id BIGINT NOT NULL
+        REFERENCES cooking_sessions(id) ON DELETE CASCADE,
+    dish_id BIGINT NOT NULL
+        REFERENCES dishes(id),
+    position INTEGER NOT NULL CHECK (position > 0),
+
+    PRIMARY KEY (session_id, dish_id),
+    UNIQUE (session_id, position)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cooking_session_dishes_dish_id
+    ON cooking_session_dishes (dish_id);
+
+
+-----------------------------------------------------------------------------------------
+
 /*
  * chạy dữ liệu cho món ăn
  * 

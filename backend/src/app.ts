@@ -5,6 +5,7 @@ import databaseRoutes from './routes/database.routes.js'
 import dishRoutes from './routes/dish.routes.js'
 import categoryRoutes from './routes/category.routes.js'
 import menuRoutes from './routes/menu.routes.js'
+import cookingRoutes from './routes/cooking.routes.js'
 
 const app = express()
 
@@ -19,5 +20,6 @@ app.use('/api', databaseRoutes)
 app.use('/api', dishRoutes)
 app.use('/api', categoryRoutes)
 app.use('/api', menuRoutes)
+app.use('/api', cookingRoutes)
 
 export default app

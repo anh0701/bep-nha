@@ -94,3 +94,31 @@ GET {{baseUrl}}/api/menus
 
 ###
 GET {{baseUrl}}/api/menus/1
+
+### 
+# POST {{baseUrl}}/api/cooking-sessions
+# Content-Type: application/json
+# Accept: application/json
+
+# {
+#   "dishIds": ["128", "82", "27"]
+# }
+
+###
+POST {{baseUrl}}/api/cooking-sessions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "dishIds": ["128", "82", "27"],
+  "cookedAt": "2026-10-10T11:30:00+07:00"
+}
+
+###
+GET {{baseUrl}}/api/cooking-sessions/calendar?month=2026-10
+
+###
+GET {{baseUrl}}/api/cooking-sessions/by-date?date=2026-10-12
+
+###
+GET {{baseUrl}}/api/cooking-sessions/cooked-dishes

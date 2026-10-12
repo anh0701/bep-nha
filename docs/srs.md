@@ -51,3 +51,6 @@ flowchart TD
 | PUT | /api/dishes/:id | Sửa món ăn |
 | DELETE | /api/dishes/:id | Ngừng hiển thị món ăn |
 | GET | /api/categories | Lấy danh mục món ăn |
+| GET | /api/cooking-sessions/calendar?month=2026-10 | Lấy các món đã nấu trong tháng, không trùng món trong cùng ngày |
+| GET | /api/cooking-sessions/by-date?date=2026-10-12 | Lấy từng lần nấu trong ngày, gồm giờ nấu và danh sách món |
+| POST | /api/cooking-sessions | Ghi nhận một lần nấu |

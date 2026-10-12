@@ -7,6 +7,8 @@ import MobileNav from './components/layout/MobileNav'
 import HomePage from './pages/HomePage'
 import DishesPage from './pages/DishesPage'
 import RandomPage from './pages/RandomPage'
+import HistoryPage from './pages/HistoryPage'
+import MealPlanPage from './pages/MealPlanPage'
 
 function ComingSoonPage() {
   return (
@@ -33,8 +35,8 @@ function AppLayout() {
           <Route path="/" element={<HomePage />} />
           <Route path="/dishes" element={<DishesPage />} />
           <Route path="/random" element={<RandomPage />} />
-          <Route path="/meal-plan" element={<ComingSoonPage />} />
-          <Route path="/history" element={<ComingSoonPage />} />
+          <Route path="/meal-plan" element={<MealPlanPage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/statistics" element={<ComingSoonPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
