@@ -1,12 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, LoaderCircle, Pencil, Plus, Search, SlidersHorizontal, Trash2, Utensils, X } from 'lucide-react'
 
-import { getDishes, createDish, updateDish, deleteDish } from '../services/dish.service'
+import { useEffect, useMemo, useState } from 'react'
+
+import {
+  Pencil,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  Utensils,
+  X,
+} from 'lucide-react'
+
+import { getDishes, deleteDish } from '../services/dish.service'
 import { getCategories } from '../services/category.service'
-import type { Dish, DishFormData } from '../types/dish'
+
+import type { Dish } from '../types/dish'
 import type { Category } from '../types/category'
+
 import CategorySelect from '../components/CategorySelect'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import DishFormModal from '../components/DishFormModal'
 
 export default function DishesPage() {
   const [dishes, setDishes] = useState<Dish[]>([])
@@ -19,13 +32,8 @@ export default function DishesPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [formData, setFormData] = useState<DishFormData>({
-    name: '',
-    category_id: '',
-  })
-  const [formError, setFormError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingDish, setEditingDish] = useState<Dish | null>(null)
+
   const [deletingDishId, setDeletingDishId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [dishToDelete, setDishToDelete] = useState<Dish | null>(null)
@@ -72,100 +80,27 @@ export default function DishesPage() {
 
   function openCreateForm() {
     setEditingDish(null)
-    setFormData({
-      name: '',
-      category_id: categories[0]?.id ?? '',
-    })
-    setFormError(null)
     setShowCreateForm(true)
   }
 
   function openEditForm(dish: Dish) {
     setEditingDish(dish)
-    setFormData({
-      name: dish.name,
-      category_id: dish.category_id,
-    })
-    setFormError(null)
     setShowCreateForm(true)
   }
 
   function closeCreateForm() {
-    if (isSubmitting) return
-
     setShowCreateForm(false)
     setEditingDish(null)
-    setFormError(null)
   }
 
-  async function handleCreateDish(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault()
-    setFormError(null)
+  function handleDishSaved(savedDish: Dish) {
+    setDishes((currentDishes) => [
+      savedDish,
+      ...currentDishes.filter((dish) => dish.id !== savedDish.id),
+    ])
 
-    const name = formData.name.trim()
-
-    if (!name) {
-      setFormError('Vui lòng nhập tên món ăn.')
-      return
-    }
-
-    if (name.length > 200) {
-      setFormError('Tên món ăn không được vượt quá 200 ký tự.')
-      return
-    }
-
-    if (!formData.category_id) {
-      setFormError('Vui lòng chọn danh mục.')
-      return
-    }
-
-    try {
-      setIsSubmitting(true)
-
-      const payload: DishFormData = {
-        name,
-        category_id: formData.category_id,
-      }
-
-      if (editingDish) {
-        const updatedDish = await updateDish(editingDish.id, payload)
-
-        setDishes((currentDishes) => [
-          updatedDish,
-          ...currentDishes.filter((dish) => dish.id !== updatedDish.id),
-        ])
-      } else {
-        const newDish = await createDish(payload)
-
-        setDishes((currentDishes) => [
-          newDish,
-          ...currentDishes.filter((dish) => dish.id !== newDish.id),
-        ])
-      }
-
-      setSelectedCategory('all')
-      setSearch('')
-      setShowCreateForm(false)
-      setEditingDish(null)
-      setFormData({ name: '', category_id: '' })
-    } catch (err) {
-      console.error('Failed to create dish:', err)
-
-      const message =
-        err instanceof Error ? err.message : ''
-
-      if (message.includes('already exists')) {
-        setFormError('Tên món ăn này đã tồn tại trong hệ thống.')
-      } else if (message.includes('Category does not exist')) {
-        setFormError('Danh mục không tồn tại. Vui lòng chọn lại.')
-      } else {
-        setFormError('Không thể thêm món ăn. Vui lòng thử lại.')
-      }
-    } finally {
-      setIsSubmitting(false)
-    }
+    setSelectedCategory('all')
+    setSearch('')
   }
 
   async function handleDeleteDish(dish: Dish) {
@@ -182,7 +117,6 @@ export default function DishesPage() {
       setDishToDelete(null)
     } catch (err) {
       console.error('Failed to delete dish:', err)
-
       setDeleteError('Không thể xóa món ăn. Vui lòng thử lại.')
     } finally {
       setDeletingDishId(null)
@@ -267,7 +201,6 @@ export default function DishesPage() {
               : `${filteredDishes.length} / ${dishes.length} món`}
           </p>
         </div>
-
       </section>
 
       <section>
@@ -288,6 +221,7 @@ export default function DishesPage() {
             </button>
           </div>
         )}
+
         {loading ? (
           <div className="py-16 text-center text-sm text-muted">
             Đang tải kho món ăn...
@@ -400,137 +334,13 @@ export default function DishesPage() {
       </section>
 
       {showCreateForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeCreateForm()
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-dish-title"
-            className="w-full max-w-md rounded-2xl bg-cream p-6 shadow-xl sm:p-7"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id="create-dish-title"
-                  className="text-xl font-bold text-ink"
-                >
-                  {editingDish ? 'Chỉnh sửa món ăn' : 'Thêm món ăn mới'}
-                </h2>
-
-                <p className="mt-1 text-sm text-muted">
-                  Bổ sung một món ăn vào kho bếp của bạn.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeCreateForm}
-                disabled={isSubmitting}
-                aria-label="Đóng form"
-                className="rounded-lg p-2 text-muted transition hover:bg-beige disabled:opacity-50"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateDish} className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <label
-                  htmlFor="dish-name"
-                  className="block text-sm font-medium text-ink"
-                >
-                  Tên món ăn
-                </label>
-
-                <input
-                  id="dish-name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(event) =>
-                    setFormData((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Ví dụ: Canh bí đỏ"
-                  maxLength={200}
-                  required
-                  autoFocus
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-forest disabled:opacity-60"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="dish-category"
-                  className="block text-sm font-medium text-ink"
-                >
-                  Danh mục
-                </label>
-
-
-                <CategorySelect
-                  id="dish-category"
-                  categories={categories}
-                  value={formData.category_id}
-                  onChange={(value) =>
-                    setFormData((current) => ({
-                      ...current,
-                      category_id: value,
-                    }))
-                  }
-                  placeholder="Chọn danh mục"
-                  ariaLabel="Danh mục món ăn"
-                  required
-                  disabled={isSubmitting}
-                />
-
-              </div>
-
-              {formError && (
-                <p
-                  role="alert"
-                  className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
-                >
-                  {formError}
-                </p>
-              )}
-
-              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeCreateForm}
-                  disabled={isSubmitting}
-                  className="rounded-xl border border-beige px-4 py-3 text-sm font-semibold text-ink transition hover:bg-beige disabled:opacity-50"
-                >
-                  Hủy
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Plus size={17} />
-                  {isSubmitting
-                    ? 'Đang lưu...'
-                    : editingDish
-                      ? 'Lưu thay đổi'
-                      : 'Lưu món ăn'}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+        <DishFormModal
+          categories={categories}
+          dish={editingDish}
+          onClose={closeCreateForm}
+          onSuccess={handleDishSaved}
+        />
       )}
-
 
       {dishToDelete && (
         <ConfirmDeleteModal
@@ -552,7 +362,6 @@ export default function DishesPage() {
           onConfirm={() => void handleDeleteDish(dishToDelete)}
         />
       )}
-
     </div>
   )
 }
