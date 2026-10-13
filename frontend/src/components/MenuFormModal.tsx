@@ -108,8 +108,8 @@ export default function MenuFormModal({
 
         const dishes = keyword
             ? availableDishes.filter((dish) =>
-                  normalizeText(dish.name).includes(keyword),
-              )
+                normalizeText(dish.name).includes(keyword),
+            )
             : availableDishes
 
         return dishes.slice(0, 30)
@@ -252,13 +252,13 @@ export default function MenuFormModal({
 
     const dropdownStyle: CSSProperties | undefined = dropdownPosition
         ? {
-              position: 'fixed',
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-              maxHeight: dropdownPosition.maxHeight,
-              zIndex: 10000,
-          }
+            position: 'fixed',
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
+            maxHeight: dropdownPosition.maxHeight,
+            zIndex: 10000,
+        }
         : undefined
 
     return (
@@ -379,7 +379,7 @@ export default function MenuFormModal({
                                             ) {
                                                 removeDish(
                                                     selectedDishIds[
-                                                        selectedDishIds.length - 1
+                                                    selectedDishIds.length - 1
                                                     ],
                                                 )
                                             }
@@ -454,72 +454,79 @@ export default function MenuFormModal({
             {showDropdown &&
                 dropdownPosition &&
                 createPortal(
+
                     <div
                         ref={dropdownRef}
                         style={dropdownStyle}
                         className="overflow-y-auto rounded-xl border border-stone-200 bg-white py-1 shadow-lg"
                     >
-                        <div className="border-b border-stone-100 px-3 py-2 text-xs text-stone-500">
-                            {filteredDishes.length > 0
-                                ? `${filteredDishes.length} kết quả${filteredDishes.length === 30 ? ' (tối đa 30)' : ''}`
-                                : 'Không tìm thấy món phù hợp'}
-                        </div>
+                        {!searchTerm.trim() ? (
+                            <p className="px-3 py-3 text-sm text-stone-400">
+                                Type to search dishes...
+                            </p>
+                        ) : (
+                            <>
+                                <div className="border-b border-stone-100 px-3 py-2 text-xs text-stone-500">
+                                    {filteredDishes.length > 0
+                                        ? `${filteredDishes.length} kết quả${filteredDishes.length === 30 ? ' (tối đa 30)' : ''}`
+                                        : 'Không tìm thấy món phù hợp'}
+                                </div>
 
-                        {filteredDishes.map((dish) => {
-                            const isSelected = selectedDishIds.includes(
-                                dish.id,
-                            )
+                                {filteredDishes.map((dish) => {
+                                    const isSelected = selectedDishIds.includes(dish.id)
 
-                            return (
-                                <button
-                                    key={dish.id}
-                                    type="button"
-                                    onClick={() => toggleDish(dish.id)}
-                                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
-                                >
-                                    <span
-                                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                            isSelected
-                                                ? 'border-emerald-600 bg-emerald-600'
-                                                : 'border-stone-300 bg-white'
-                                        }`}
-                                    >
-                                        {isSelected && (
-                                            <svg
-                                                viewBox="0 0 16 16"
-                                                fill="none"
-                                                className="h-3 w-3 text-white"
-                                                aria-hidden="true"
+                                    return (
+                                        <button
+                                            key={dish.id}
+                                            type="button"
+                                            onClick={() => toggleDish(dish.id)}
+                                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-stone-50"
+                                        >
+                                            <span
+                                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected
+                                                        ? 'border-emerald-600 bg-emerald-600'
+                                                        : 'border-stone-300 bg-white'
+                                                    }`}
                                             >
-                                                <path
-                                                    d="m3.5 8 3 3 6-6"
-                                                    stroke="currentColor"
-                                                    strokeWidth="1.8"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                        )}
-                                    </span>
+                                                {isSelected && (
+                                                    <svg
+                                                        viewBox="0 0 16 16"
+                                                        fill="none"
+                                                        className="h-3 w-3 text-white"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path
+                                                            d="m3.5 8 3 3 6-6"
+                                                            stroke="currentColor"
+                                                            strokeWidth="1.8"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        />
+                                                    </svg>
+                                                )}
+                                            </span>
 
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm font-medium text-stone-800">
-                                            {dish.name}
-                                        </span>
-                                        <span className="block truncate text-xs text-stone-500">
-                                            {dish.category ?? ''}
-                                        </span>
-                                    </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-medium text-stone-800">
+                                                    {dish.name}
+                                                </span>
+                                                <span className="block truncate text-xs text-stone-500">
+                                                    {dish.category ?? ''}
+                                                </span>
+                                            </span>
 
-                                    {isSelected && (
-                                        <span className="shrink-0 text-xs text-emerald-700">
-                                            Đã chọn
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </div>,
+                                            {isSelected && (
+                                                <span className="shrink-0 text-xs text-emerald-700">
+                                                    Đã chọn
+                                                </span>
+                                            )}
+                                        </button>
+                                    )
+                                })}
+                            </>
+                        )}
+                    </div>
+                    ,
                     document.body,
                 )}
         </div>
