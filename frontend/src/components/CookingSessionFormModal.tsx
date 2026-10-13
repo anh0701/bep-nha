@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LoaderCircle, Save, X } from 'lucide-react'
+
+import DishMultiSelect from '../components/DishMultiSelect'
 
 import type { Dish } from '../types/dish'
 import type { CookingSession } from '../types/cooking'
@@ -30,29 +32,25 @@ export default function CookingSessionFormModal({
     const [selectedDishIds, setSelectedDishIds] = useState<string[]>(
         session?.dishes.map((dish) => dish.id) ?? [],
     )
-    const [dishSearch, setDishSearch] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
 
-    const filteredDishes = useMemo(() => {
-        const keyword = dishSearch.trim().toLocaleLowerCase('vi')
-
-        return dishes.filter((dish) =>
-            dish.name.toLocaleLowerCase('vi').includes(keyword),
+    useEffect(() => {
+        setFormDate(initialDate)
+        setFormTime(initialTime)
+        setSelectedDishIds(
+            session?.dishes.map((dish) => dish.id) ?? [],
         )
-    }, [dishes, dishSearch])
+        setFormError(null)
+    }, [session, initialDate, initialTime])
 
-    function toggleDish(dishId: string) {
-        setSelectedDishIds((current) =>
-            current.includes(dishId)
-                ? current.filter((id) => id !== dishId)
-                : [...current, dishId],
-        )
-    }
-
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(
+        event: React.FormEvent<HTMLFormElement>,
+    ) {
         event.preventDefault()
         setFormError(null)
+
+        if (isSubmitting) return
 
         if (selectedDishIds.length === 0) {
             setFormError('Vui lòng chọn ít nhất một món đã nấu.')
@@ -186,52 +184,22 @@ export default function CookingSessionFormModal({
                             </span>
                         </div>
 
-                        <input
-                            type="search"
-                            value={dishSearch}
-                            onChange={(event) =>
-                                setDishSearch(event.target.value)
-                            }
-                            placeholder="Tìm món trong kho..."
-                            aria-label="Tìm món trong kho"
+                        <DishMultiSelect
+                            dishes={dishes}
+                            value={selectedDishIds}
+                            onChange={(dishIds) => {
+                                setSelectedDishIds(dishIds)
+                                setFormError(null)
+                            }}
                             disabled={isSubmitting}
-                            className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm outline-none focus:border-forest disabled:opacity-60"
+                            placeholder="Tìm món đã nấu..."
+                            variant="forest"
                         />
 
-                        <div className="max-h-56 space-y-1 overflow-y-auto rounded-xl border border-beige bg-white p-2">
-                            {filteredDishes.length === 0 ? (
-                                <p className="px-3 py-5 text-center text-sm text-muted">
-                                    Không tìm thấy món ăn.
-                                </p>
-                            ) : (
-                                filteredDishes.map((dish) => (
-                                    <label
-                                        key={dish.id}
-                                        className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition hover:bg-sage/40"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedDishIds.includes(
-                                                dish.id,
-                                            )}
-                                            onChange={() =>
-                                                toggleDish(dish.id)
-                                            }
-                                            disabled={isSubmitting}
-                                            className="size-4 accent-forest"
-                                        />
-
-                                        <span className="min-w-0 flex-1 text-sm text-ink">
-                                            {dish.name}
-                                        </span>
-
-                                        <span className="text-xs text-muted">
-                                            {dish.category}
-                                        </span>
-                                    </label>
-                                ))
-                            )}
-                        </div>
+                        <p className="text-xs text-muted">
+                            Nhập tên món để tìm kiếm, chọn nhiều món và
+                            nhấn dấu × để bỏ món đã chọn.
+                        </p>
                     </div>
 
                     {formError && (
