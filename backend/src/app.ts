@@ -6,6 +6,7 @@ import dishRoutes from './routes/dish.routes.js'
 import categoryRoutes from './routes/category.routes.js'
 import menuRoutes from './routes/menu.routes.js'
 import cookingRoutes from './routes/cooking.routes.js'
+import statisticsRouter from './routes/statistics.routes.js'
 
 const app = express()
 
@@ -21,5 +22,6 @@ app.use('/api', dishRoutes)
 app.use('/api', categoryRoutes)
 app.use('/api', menuRoutes)
 app.use('/api', cookingRoutes)
+app.use('/api/statistics', statisticsRouter)
 
 export default app

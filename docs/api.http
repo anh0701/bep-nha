@@ -158,3 +158,15 @@ Content-Type: application/json
 
 ###
 DELETE {{baseUrl}}/api/menus/4
+
+###
+GET	{{baseUrl}}/api/statistics/overview?from=2026-10-01&to=2026-11-01
+
+###
+GET	{{baseUrl}}/api/statistics/timeline?from=2026-10-01&to=2026-11-01&groupBy=day
+
+###
+GET	{{baseUrl}}/api/statistics/top-dishes?from=2026-10-01&to=2026-11-01&limit=10
+
+###
+GET	{{baseUrl}}/api/statistics/categories?from=2026-10-01&to=2026-11-01

@@ -10,6 +10,7 @@ import RandomPage from './pages/RandomPage'
 import HistoryPage from './pages/HistoryPage'
 import MealPlanPage from './pages/MealPlanPage'
 import MealPlanDetailPage from './pages/MealPlanDetailPage'
+import StatisticsPage from './pages/StatisticsPage'
 
 function ComingSoonPage() {
   return (
@@ -18,7 +19,7 @@ function ComingSoonPage() {
         Chức năng đang được phát triển
       </h1>
       <p className="mt-2 text-sm text-muted">
-        Trang này sẽ được triển khai trong các bước tiếp theo.
+        Trang này sẽ được triển khai trong các phiên bản tiếp theo.
       </p>
     </div>
   )
@@ -39,7 +40,7 @@ function AppLayout() {
           <Route path="/meal-plan" element={<MealPlanPage />} />
           <Route path="/meal-plan/:id" element={<MealPlanDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />
-          <Route path="/statistics" element={<ComingSoonPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
