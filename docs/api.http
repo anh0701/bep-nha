@@ -170,3 +170,42 @@ GET	{{baseUrl}}/api/statistics/top-dishes?from=2026-10-01&to=2026-11-01&limit=10
 
 ###
 GET	{{baseUrl}}/api/statistics/categories?from=2026-10-01&to=2026-11-01
+
+###
+GET {{baseUrl}}/api/ingredients 
+
+###
+POST {{baseUrl}}/api/ingredients 
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Thịt bò",
+  "ingredient_group": "Thịt",
+  "default_unit": "g"
+}
+
+###
+GET {{baseUrl}}/api/ingredients?search=thịt 
+
+###
+PUT {{baseUrl}}/api/ingredients/1 
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Thịt bò",
+  "ingredient_group": "Thịt",
+  "default_unit": "g"
+}
+
+###
+PATCH {{baseUrl}}/api/ingredients/1/status 
+Accept: application/json
+Content-Type: application/json
+
+{
+  "is_active": false
+}
+
+###
