@@ -209,3 +209,30 @@ Content-Type: application/json
 }
 
 ###
+GET http://localhost:3000/api/dishes/1/ingredients
+
+###
+PUT http://localhost:3000/api/dishes/1/ingredients
+Accept: application/json
+Content-Type: application/json
+
+{
+  "ingredients": [
+    {
+      "ingredient_id": "1",
+      "quantity_per_person": 300,
+      "unit": "g",
+      "ingredient_role": "main",
+      "is_optional": false,
+      "preparation_note": "Chặt miếng vừa ăn"
+    },
+    {
+      "ingredient_id": "2",
+      "quantity_per_person": 20,
+      "unit": "g",
+      "ingredient_role": "minor",
+      "is_optional": false,
+      "preparation_note": "Thái lát"
+    }
+  ]
+}
