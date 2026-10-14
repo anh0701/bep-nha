@@ -347,6 +347,8 @@ VALUES
     ('Khác')
 ON CONFLICT (name) DO NOTHING;
 
+ALTER TABLE ingredients DROP COLUMN ingredient_group;
+
 
 -----------------------------------------------------------------------------------------
 
