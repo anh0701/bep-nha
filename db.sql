@@ -41,6 +41,22 @@ CREATE TABLE public.dishes_import (
 );
 
 
+-- public.ingredient_categories definition
+
+-- Drop table
+
+-- DROP TABLE public.ingredient_categories;
+
+CREATE TABLE public.ingredient_categories (
+	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
+	"name" varchar(100) NOT NULL,
+	created_at timestamptz DEFAULT now() NOT NULL,
+	CONSTRAINT ingredient_categories_name_not_blank CHECK ((length(TRIM(BOTH FROM name)) > 0)),
+	CONSTRAINT ingredient_categories_name_unique UNIQUE (name),
+	CONSTRAINT ingredient_categories_pkey PRIMARY KEY (id)
+);
+
+
 -- public.ingredients definition
 
 -- Drop table
@@ -50,11 +66,11 @@ CREATE TABLE public.dishes_import (
 CREATE TABLE public.ingredients (
 	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
 	"name" varchar(100) NOT NULL,
-	ingredient_group varchar(50) NULL,
 	default_unit varchar(20) DEFAULT 'g'::character varying NOT NULL,
 	is_active bool DEFAULT true NOT NULL,
 	created_at timestamptz DEFAULT now() NOT NULL,
 	updated_at timestamptz DEFAULT now() NOT NULL,
+	ingredient_category_id int8 NULL,
 	CONSTRAINT ingredients_default_unit_not_blank CHECK ((length(TRIM(BOTH FROM default_unit)) > 0)),
 	CONSTRAINT ingredients_name_not_blank CHECK ((length(TRIM(BOTH FROM name)) > 0)),
 	CONSTRAINT ingredients_name_unique UNIQUE (name),

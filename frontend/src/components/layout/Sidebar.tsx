@@ -1,24 +1,11 @@
 
 import {
-    CalendarDays,
-    ChartNoAxesColumn,
     ChefHat,
-    Clock3,
     CookingPot,
-    Shuffle,
-    Utensils,
 } from 'lucide-react'
 
 import { NavLink } from 'react-router'
-
-const navigation = [
-    { label: 'Trang chủ', path: '/', icon: CookingPot },
-    { label: 'Random món ăn', path: '/random', icon: Shuffle },
-    { label: 'Thực đơn', path: '/meal-plan', icon: CalendarDays },
-    { label: 'Kho món ăn', path: '/dishes', icon: Utensils },
-    { label: 'Lịch sử nấu', path: '/history', icon: Clock3 },
-    { label: 'Thống kê', path: '/statistics', icon: ChartNoAxesColumn },
-]
+import { navigation } from '../../config/navigation'
 
 export default function Sidebar() {
     return (
@@ -42,7 +29,6 @@ export default function Sidebar() {
                 KHÔNG GIAN BẾP
             </p>
 
-
             <nav className="space-y-1">
                 {navigation.map(({ label, path, icon: Icon }) => (
                     <NavLink
@@ -61,7 +47,6 @@ export default function Sidebar() {
                     </NavLink>
                 ))}
             </nav>
-
 
             <div className="mt-auto rounded-2xl bg-sage/70 p-4">
                 <ChefHat size={24} className="mb-3 text-forest" />

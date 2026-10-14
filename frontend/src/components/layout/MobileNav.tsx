@@ -1,20 +1,5 @@
-
-import {
-    CalendarDays,
-    ChartNoAxesColumn,
-    CookingPot,
-    Shuffle,
-    Utensils,
-} from 'lucide-react'
 import { NavLink } from 'react-router'
-
-const navigation = [
-    { label: 'Trang chủ', path: '/', icon: CookingPot },
-    { label: 'Random món ăn', path: '/random', icon: Shuffle },
-    { label: 'Thực đơn', path: '/meal-plan', icon: CalendarDays },
-    { label: 'Kho món ăn', path: '/dishes', icon: Utensils },
-    { label: 'Thống kê', path: '/statistics', icon: ChartNoAxesColumn },
-]
+import { navigation } from '../../config/navigation'
 
 export default function MobileNav() {
     return (

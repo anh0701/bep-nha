@@ -309,6 +309,44 @@ CREATE TABLE public.allergen_ingredients (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+BEGIN;
+
+CREATE TABLE public.ingredient_categories (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ingredient_categories_name_unique UNIQUE (name),
+    CONSTRAINT ingredient_categories_name_not_blank
+        CHECK (length(trim(name)) > 0)
+);
+
+ALTER TABLE public.ingredients
+ADD COLUMN ingredient_category_id bigint;
+
+COMMIT;
+
+SELECT
+    ingredient_group,
+    COUNT(*) AS ingredient_count
+FROM public.ingredients
+GROUP BY ingredient_group
+ORDER BY ingredient_group;
+
+INSERT INTO public.ingredient_categories (name)
+VALUES
+    ('Thịt'),
+    ('Hải sản'),
+    ('Rau củ'),
+    ('Nấm'),
+    ('Trứng'),
+    ('Đậu và chế phẩm từ đậu'),
+    ('Gia vị'),
+    ('Dầu và chất béo'),
+    ('Đồ khô'),
+    ('Sữa và chế phẩm từ sữa'),
+    ('Khác')
+ON CONFLICT (name) DO NOTHING;
+
 
 -----------------------------------------------------------------------------------------
 
