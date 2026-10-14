@@ -31,14 +31,11 @@ function parseIngredientInput(
         !input.name.trim() ||
         input.name.trim().length > 100 ||
         (
-            input.ingredient_group !== undefined &&
-            input.ingredient_group !== null &&
-            typeof input.ingredient_group !== 'string'
+            typeof input.ingredient_category_id !== 'string' &&
+            typeof input.ingredient_category_id !== 'number'
         ) ||
-        (
-            typeof input.ingredient_group === 'string' &&
-            input.ingredient_group.trim().length > 100
-        ) ||
+        !/^\d+$/.test(String(input.ingredient_category_id)) ||
+        BigInt(String(input.ingredient_category_id)) <= 0n ||
         typeof input.default_unit !== 'string' ||
         !input.default_unit.trim() ||
         input.default_unit.trim().length > 30
@@ -48,10 +45,7 @@ function parseIngredientInput(
 
     return {
         name: input.name,
-        ingredient_group:
-            typeof input.ingredient_group === 'string'
-                ? input.ingredient_group
-                : null,
+        ingredient_category_id: String(input.ingredient_category_id),
         default_unit: input.default_unit,
     }
 }
@@ -65,10 +59,10 @@ function handleIngredientError(
         typeof error === 'object' &&
         error !== null &&
         'code' in error &&
-        error.code === '23505'
+        error.code === '23503'
     ) {
-        res.status(409).json({
-            message: 'Tên nguyên liệu này đã tồn tại.',
+        res.status(400).json({
+            message: 'Danh mục nguyên liệu không tồn tại.',
         })
         return
     }
@@ -162,7 +156,7 @@ export async function createIngredient(
             const validationMessages = [
                 'Tên nguyên liệu không được để trống.',
                 'Tên nguyên liệu không được vượt quá 100 ký tự.',
-                'Nhóm nguyên liệu không được vượt quá 100 ký tự.',
+                'Danh mục nguyên liệu không hợp lệ.',
                 'Đơn vị mặc định không được để trống.',
                 'Đơn vị mặc định không được vượt quá 30 ký tự.',
             ]
@@ -216,7 +210,7 @@ export async function updateIngredient(
             const validationMessages = [
                 'Tên nguyên liệu không được để trống.',
                 'Tên nguyên liệu không được vượt quá 100 ký tự.',
-                'Nhóm nguyên liệu không được vượt quá 100 ký tự.',
+                'Danh mục nguyên liệu không hợp lệ.',
                 'Đơn vị mặc định không được để trống.',
                 'Đơn vị mặc định không được vượt quá 30 ký tự.',
             ]

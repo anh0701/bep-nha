@@ -1,10 +1,10 @@
-
 import { pool } from '../db/pool.js'
 
 export interface Ingredient {
   id: string
   name: string
-  ingredient_group: string | null
+  ingredient_category_id: string
+  ingredient_category_name: string
   default_unit: string
   is_active: boolean
   created_at: Date
@@ -13,7 +13,7 @@ export interface Ingredient {
 
 export interface IngredientInput {
   name: string
-  ingredient_group: string | null
+  ingredient_category_id: string
   default_unit: string
 }
 
@@ -23,20 +23,23 @@ export async function findAllIngredients(
   const result = await pool.query<Ingredient>(
     `
     SELECT
-      id::text AS id,
-      name,
-      ingredient_group,
-      default_unit,
-      is_active,
-      created_at,
-      updated_at
-    FROM ingredients
+      i.id::text AS id,
+      i.name,
+      i.ingredient_category_id::text AS ingredient_category_id,
+      ic.name AS ingredient_category_name,
+      i.default_unit,
+      i.is_active,
+      i.created_at,
+      i.updated_at
+    FROM ingredients i
+    JOIN ingredient_categories ic
+      ON ic.id = i.ingredient_category_id
     WHERE (
       $1::text IS NULL
-      OR name ILIKE '%' || $1 || '%'
-      OR ingredient_group ILIKE '%' || $1 || '%'
+      OR i.name ILIKE '%' || $1 || '%'
+      OR ic.name ILIKE '%' || $1 || '%'
     )
-    ORDER BY is_active DESC, name ASC
+    ORDER BY i.is_active DESC, i.name ASC
     `,
     [search?.trim() || null],
   )
@@ -50,15 +53,18 @@ export async function findIngredientById(
   const result = await pool.query<Ingredient>(
     `
     SELECT
-      id::text AS id,
-      name,
-      ingredient_group,
-      default_unit,
-      is_active,
-      created_at,
-      updated_at
-    FROM ingredients
-    WHERE id = $1::bigint
+      i.id::text AS id,
+      i.name,
+      i.ingredient_category_id::text AS ingredient_category_id,
+      ic.name AS ingredient_category_name,
+      i.default_unit,
+      i.is_active,
+      i.created_at,
+      i.updated_at
+    FROM ingredients i
+    JOIN ingredient_categories ic
+      ON ic.id = i.ingredient_category_id
+    WHERE i.id = $1::bigint
     `,
     [id],
   )
@@ -73,14 +79,14 @@ export async function createIngredient(
     `
     INSERT INTO ingredients (
       name,
-      ingredient_group,
+      ingredient_category_id,
       default_unit
     )
-    VALUES ($1, $2, $3)
+    VALUES ($1, $2::bigint, $3)
     RETURNING
       id::text AS id,
       name,
-      ingredient_group,
+      ingredient_category_id::text AS ingredient_category_id,
       default_unit,
       is_active,
       created_at,
@@ -88,69 +94,64 @@ export async function createIngredient(
     `,
     [
       input.name,
-      input.ingredient_group,
+      input.ingredient_category_id,
       input.default_unit,
     ],
   )
 
-  return result.rows[0]
+  const ingredient = result.rows[0]
+
+  return (await findIngredientById(ingredient.id))!
 }
 
 export async function updateIngredient(
   id: string,
   input: IngredientInput,
 ): Promise<Ingredient | null> {
-  const result = await pool.query<Ingredient>(
+  const result = await pool.query<{ id: string }>(
     `
     UPDATE ingredients
     SET
       name = $2,
-      ingredient_group = $3,
+      ingredient_category_id = $3::bigint,
       default_unit = $4,
       updated_at = NOW()
     WHERE id = $1::bigint
-    RETURNING
-      id::text AS id,
-      name,
-      ingredient_group,
-      default_unit,
-      is_active,
-      created_at,
-      updated_at
+    RETURNING id::text AS id
     `,
     [
       id,
       input.name,
-      input.ingredient_group,
+      input.ingredient_category_id,
       input.default_unit,
     ],
   )
 
-  return result.rows[0] ?? null
+  if (!result.rows[0]) {
+    return null
+  }
+
+  return findIngredientById(id)
 }
 
 export async function setIngredientStatus(
   id: string,
   isActive: boolean,
 ): Promise<Ingredient | null> {
-  const result = await pool.query<Ingredient>(
+  const result = await pool.query(
     `
     UPDATE ingredients
     SET
       is_active = $2,
       updated_at = NOW()
     WHERE id = $1::bigint
-    RETURNING
-      id::text AS id,
-      name,
-      ingredient_group,
-      default_unit,
-      is_active,
-      created_at,
-      updated_at
     `,
     [id, isActive],
   )
 
-  return result.rows[0] ?? null
+  if (result.rowCount === 0) {
+    return null
+  }
+
+  return findIngredientById(id)
 }

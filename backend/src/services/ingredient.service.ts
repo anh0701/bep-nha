@@ -1,4 +1,3 @@
-
 import {
   findAllIngredients,
   findIngredientById,
@@ -16,7 +15,7 @@ function normalizeInput(
 ): IngredientInput {
   return {
     name: input.name.trim(),
-    ingredient_group: input.ingredient_group?.trim() || null,
+    ingredient_category_id: input.ingredient_category_id.trim(),
     default_unit: input.default_unit.trim(),
   }
 }
@@ -31,10 +30,10 @@ function validateInput(input: IngredientInput): void {
   }
 
   if (
-    input.ingredient_group !== null &&
-    input.ingredient_group.length > 100
+    !/^\d+$/.test(input.ingredient_category_id) ||
+    BigInt(input.ingredient_category_id) <= 0n
   ) {
-    throw new Error('Nhóm nguyên liệu không được vượt quá 100 ký tự.')
+    throw new Error('Danh mục nguyên liệu không hợp lệ.')
   }
 
   if (!input.default_unit) {

@@ -181,7 +181,7 @@ Content-Type: application/json
 
 {
   "name": "Thịt bò",
-  "ingredient_group": "Thịt",
+  "ingredient_category_id": "1",
   "default_unit": "g"
 }
 
@@ -195,7 +195,7 @@ Content-Type: application/json
 
 {
   "name": "Thịt bò",
-  "ingredient_group": "Thịt",
+  "ingredient_category_id": "1",
   "default_unit": "g"
 }
 
@@ -236,3 +236,6 @@ Content-Type: application/json
     }
   ]
 }
+
+###
+GET {{baseUrl}}/api/ingredient-categories
