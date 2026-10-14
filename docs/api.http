@@ -239,3 +239,18 @@ Content-Type: application/json
 
 ###
 GET {{baseUrl}}/api/ingredient-categories
+
+###
+GET {{baseUrl}}/api/allergens
+
+###
+PUT {{baseUrl}}/api/ingredients/1
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Đậu phộng",
+  "ingredient_category_id": "1",
+  "default_unit": "g",
+  "is_allergen": false
+}

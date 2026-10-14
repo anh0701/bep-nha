@@ -1,8 +1,8 @@
-
 import { Router } from 'express'
 
 import {
   getIngredients,
+  getAllergens,
   getIngredient,
   createIngredient,
   updateIngredient,
@@ -12,6 +12,7 @@ import {
 const router = Router()
 
 router.get('/ingredients', getIngredients)
+router.get('/allergens', getAllergens)
 router.get('/ingredients/:id', getIngredient)
 
 router.post('/ingredients', createIngredient)

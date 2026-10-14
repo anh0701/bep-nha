@@ -1,8 +1,8 @@
-
 import type { Request, Response } from 'express'
 
 import {
     getAllIngredients,
+    getAllergenIngredients,
     getIngredientById,
     addIngredient,
     modifyIngredient,
@@ -38,7 +38,11 @@ function parseIngredientInput(
         BigInt(String(input.ingredient_category_id)) <= 0n ||
         typeof input.default_unit !== 'string' ||
         !input.default_unit.trim() ||
-        input.default_unit.trim().length > 30
+        input.default_unit.trim().length > 30 ||
+        (
+            input.is_allergen !== undefined &&
+            typeof input.is_allergen !== 'boolean'
+        )
     ) {
         return null
     }
@@ -47,6 +51,9 @@ function parseIngredientInput(
         name: input.name,
         ingredient_category_id: String(input.ingredient_category_id),
         default_unit: input.default_unit,
+        ...(typeof input.is_allergen === 'boolean'
+            ? { is_allergen: input.is_allergen }
+            : {}),
     }
 }
 
@@ -67,11 +74,46 @@ function handleIngredientError(
         return
     }
 
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '23505'
+    ) {
+        res.status(409).json({
+            message: 'Tên nguyên liệu đã tồn tại.',
+        })
+        return
+    }
+
     console.error(fallbackMessage, error)
 
     res.status(500).json({
         message: fallbackMessage,
     })
+}
+
+const validationMessages = [
+    'Tên nguyên liệu không được để trống.',
+    'Tên nguyên liệu không được vượt quá 100 ký tự.',
+    'Danh mục nguyên liệu không hợp lệ.',
+    'Đơn vị mặc định không được để trống.',
+    'Đơn vị mặc định không được vượt quá 30 ký tự.',
+]
+
+function handleValidationError(
+    error: unknown,
+    res: Response,
+): boolean {
+    if (
+        error instanceof Error &&
+        validationMessages.includes(error.message)
+    ) {
+        res.status(400).json({ message: error.message })
+        return true
+    }
+
+    return false
 }
 
 export async function getIngredients(
@@ -96,18 +138,35 @@ export async function getIngredients(
     }
 }
 
+export async function getAllergens(
+    req: Request,
+    res: Response,
+) {
+    const search =
+        typeof req.query.search === 'string'
+            ? req.query.search.trim()
+            : undefined
+
+    try {
+        const ingredients = await getAllergenIngredients(search)
+
+        res.json({ data: ingredients })
+    } catch (error) {
+        handleIngredientError(
+            error,
+            res,
+            'Không thể lấy danh sách nguyên liệu gây dị ứng.',
+        )
+    }
+}
+
 export async function getIngredient(
     req: Request,
     res: Response,
 ) {
     const { id } = req.params
 
-    if (typeof id !== 'string') {
-        res.status(400).json({ message: 'Invalid dish id' })
-        return
-    }
-
-    if (!isValidId(id)) {
+    if (typeof id !== 'string' || !isValidId(id)) {
         res.status(400).json({
             message: 'ID nguyên liệu không hợp lệ.',
         })
@@ -152,20 +211,7 @@ export async function createIngredient(
 
         res.status(201).json({ data: ingredient })
     } catch (error) {
-        if (error instanceof Error) {
-            const validationMessages = [
-                'Tên nguyên liệu không được để trống.',
-                'Tên nguyên liệu không được vượt quá 100 ký tự.',
-                'Danh mục nguyên liệu không hợp lệ.',
-                'Đơn vị mặc định không được để trống.',
-                'Đơn vị mặc định không được vượt quá 30 ký tự.',
-            ]
-
-            if (validationMessages.includes(error.message)) {
-                res.status(400).json({ message: error.message })
-                return
-            }
-        }
+        if (handleValidationError(error, res)) return
 
         handleIngredientError(
             error,
@@ -182,12 +228,11 @@ export async function updateIngredient(
     const { id } = req.params
     const input = parseIngredientInput(req.body)
 
-    if (typeof id !== 'string') {
-        res.status(400).json({ message: 'Invalid dish id' })
-        return
-    }
-
-    if (!isValidId(id) || !input) {
+    if (
+        typeof id !== 'string' ||
+        !isValidId(id) ||
+        !input
+    ) {
         res.status(400).json({
             message: 'ID hoặc thông tin nguyên liệu không hợp lệ.',
         })
@@ -206,20 +251,7 @@ export async function updateIngredient(
 
         res.json({ data: ingredient })
     } catch (error) {
-        if (error instanceof Error) {
-            const validationMessages = [
-                'Tên nguyên liệu không được để trống.',
-                'Tên nguyên liệu không được vượt quá 100 ký tự.',
-                'Danh mục nguyên liệu không hợp lệ.',
-                'Đơn vị mặc định không được để trống.',
-                'Đơn vị mặc định không được vượt quá 30 ký tự.',
-            ]
-
-            if (validationMessages.includes(error.message)) {
-                res.status(400).json({ message: error.message })
-                return
-            }
-        }
+        if (handleValidationError(error, res)) return
 
         handleIngredientError(
             error,
@@ -235,12 +267,9 @@ export async function updateIngredientStatus(
 ) {
     const { id } = req.params
     const body = req.body as Record<string, unknown> | null
-    if (typeof id !== 'string') {
-        res.status(400).json({ message: 'Invalid dish id' })
-        return
-    }
 
     if (
+        typeof id !== 'string' ||
         !isValidId(id) ||
         !body ||
         typeof body.is_active !== 'boolean'

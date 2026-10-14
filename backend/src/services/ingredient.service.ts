@@ -1,5 +1,6 @@
 import {
   findAllIngredients,
+  findAllergenIngredients,
   findIngredientById,
   createIngredient as insertIngredient,
   updateIngredient as editIngredient,
@@ -17,6 +18,9 @@ function normalizeInput(
     name: input.name.trim(),
     ingredient_category_id: input.ingredient_category_id.trim(),
     default_unit: input.default_unit.trim(),
+    ...(typeof input.is_allergen === 'boolean'
+      ? { is_allergen: input.is_allergen }
+      : {}),
   }
 }
 
@@ -47,6 +51,10 @@ function validateInput(input: IngredientInput): void {
 
 export async function getAllIngredients(search?: string) {
   return findAllIngredients(search)
+}
+
+export async function getAllergenIngredients(search?: string) {
+  return findAllergenIngredients(search)
 }
 
 export async function getIngredientById(id: string) {
