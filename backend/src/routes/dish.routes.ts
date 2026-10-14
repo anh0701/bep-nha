@@ -7,6 +7,7 @@ import {
   updateDish,
   deleteDish,
   randomDishes,
+  getDish,
 } from '../controllers/dish.controller.js'
 
 import {
@@ -22,6 +23,7 @@ router.get('/dishes', getDishes)
 router.post('/dishes', createDish)
 router.put('/dishes/:id', updateDish)
 router.delete('/dishes/:id', deleteDish)
+router.get('/dishes/:id', getDish)
 
 router.get('/dishes/:id/ingredients', getDishIngredients)
 router.put('/dishes/:id/ingredients', updateDishIngredients)

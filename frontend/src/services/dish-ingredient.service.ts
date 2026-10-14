@@ -1,4 +1,4 @@
-import type { IngredientRole } from "../types/dish-ingredient"
+import type { DishIngredientListResponse, IngredientRole } from "../types/dish-ingredient"
 
 export interface DishIngredient {
   ingredient_id: string
@@ -19,11 +19,6 @@ export interface DishIngredientInput {
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string | null
-}
-
-export interface DishIngredientListResponse {
-  data: DishIngredient[]
-  total: number
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL

@@ -3,6 +3,7 @@ import type {
   DishFormData,
   DishListResponse,
 } from '../types/dish'
+import type { DishIngredientListResponse } from '../types/dish-ingredient'
 
 import type {
   RandomRequest,
@@ -105,4 +106,41 @@ export async function randomizeDishes(
   }
 
   return result.data as RandomResult
+}
+
+export async function getDishById(id: string): Promise<Dish> {
+  const response = await fetch(`${API_BASE_URL}/dishes/${id}`)
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ?? `Failed to fetch dish: ${response.status}`,
+    )
+  }
+
+  if (!result?.data) {
+    throw new Error('Invalid response from dish detail API')
+  }
+
+  return result.data as Dish
+}
+
+export async function getDishIngredients(
+  dishId: string,
+): Promise<DishIngredientListResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/dishes/${dishId}/ingredients`,
+  )
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ??
+        `Không thể lấy nguyên liệu của món ăn (${response.status}).`,
+    )
+  }
+
+  return result as DishIngredientListResponse
 }

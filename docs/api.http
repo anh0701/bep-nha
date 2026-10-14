@@ -209,10 +209,10 @@ Content-Type: application/json
 }
 
 ###
-GET http://localhost:3000/api/dishes/1/ingredients
+GET {{baseUrl}}/api/dishes/1/ingredients
 
 ###
-PUT http://localhost:3000/api/dishes/1/ingredients
+PUT {{baseUrl}}/api/dishes/1/ingredients
 Accept: application/json
 Content-Type: application/json
 
@@ -254,3 +254,9 @@ Content-Type: application/json
   "default_unit": "g",
   "is_allergen": false
 }
+
+###
+GET  {{baseUrl}}/api/dishes/119
+
+###
+GET {{baseUrl}}/api/dishes/119/ingredients

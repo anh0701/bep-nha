@@ -20,6 +20,7 @@ import type { Category } from '../types/category'
 import CategorySelect from '../components/CategorySelect'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import DishFormModal from '../components/DishFormModal'
+import DishDetailModal from '../components/DishDetailModal'
 
 export default function DishesPage() {
   const [dishes, setDishes] = useState<Dish[]>([])
@@ -37,6 +38,7 @@ export default function DishesPage() {
   const [deletingDishId, setDeletingDishId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [dishToDelete, setDishToDelete] = useState<Dish | null>(null)
+  const [selectedDish, setSelectedDish] = useState<Dish | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -283,9 +285,14 @@ export default function DishesPage() {
                   </div>
 
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold text-ink">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDish(dish)}
+                      className="block max-w-full truncate text-left text-sm font-semibold text-ink transition hover:text-forest hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                      title={`Xem chi tiết ${dish.name}`}
+                    >
                       {dish.name}
-                    </h2>
+                    </button>
 
                     <p className="mt-1 text-xs text-muted sm:hidden">
                       {dish.category}
@@ -361,6 +368,13 @@ export default function DishesPage() {
           onCancel={() => setDishToDelete(null)}
           onConfirm={() => void handleDeleteDish(dishToDelete)}
         />
+      )}
+
+      {selectedDish && (
+          <DishDetailModal
+              dish={selectedDish}
+              onClose={() => setSelectedDish(null)}
+          />
       )}
     </div>
   )

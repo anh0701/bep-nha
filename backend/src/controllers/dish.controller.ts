@@ -7,6 +7,7 @@ import {
     modifyDish,
     removeDish,
     randomize,
+    getDishById,
 } from '../services/dish.service.js'
 
 function isDatabaseError(
@@ -261,3 +262,28 @@ export async function randomDishes(
     }
 }
 
+export async function getDish(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = req.params
+
+  if (typeof id !== 'string' || !isValidId(id)) {
+    res.status(400).json({ message: 'Invalid dish id' })
+    return
+  }
+
+  try {
+    const dish = await getDishById(id)
+
+    if (!dish) {
+      res.status(404).json({ message: 'Dish not found' })
+      return
+    }
+
+    res.status(200).json({ data: dish })
+  } catch (error) {
+    console.error('Failed to get dish:', error)
+    res.status(500).json({ message: 'Cannot retrieve dish' })
+  }
+}

@@ -149,3 +149,22 @@ export async function findRandomCandidates(
   return result.rows
 }
 
+export async function findDishById(id: string): Promise<Dish | null> {
+  const result = await pool.query<Dish>(
+    `
+    SELECT
+      d.id,
+      d.name,
+      d.category_id,
+      c.name AS category,
+      d.is_active
+    FROM dishes d
+    INNER JOIN categories c ON c.id = d.category_id
+    WHERE d.id = $1
+      AND d.is_active = TRUE
+    `,
+    [id],
+  )
+
+  return result.rows[0] ?? null
+}

@@ -4,6 +4,7 @@ import {
   updateDish as editDish,
   deactivateDish as disableDish,
   findRandomCandidates,
+  findDishById,
 } from '../repositories/dish.repository.js'
 
 import type { RandomDishCandidate } from '../repositories/dish.repository.js'
@@ -75,8 +76,6 @@ function pickDish(
 ): RandomDishCandidate | null {
   return weightedPick(dishes, getDishWeight)
 }
-
-
 
 async function saveMealResult<
   T extends { id: string },
@@ -209,3 +208,6 @@ export async function randomize(options: RandomOptions) {
   })
 }
 
+export async function getDishById(id: string) {
+  return findDishById(id)
+}

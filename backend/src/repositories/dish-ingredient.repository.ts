@@ -12,6 +12,7 @@ export interface DishIngredient {
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string | null
+  is_allergen: boolean
 }
 
 export interface DishIngredientInput {
@@ -51,7 +52,12 @@ export async function findDishIngredients(
       di.unit,
       di.ingredient_role,
       di.is_optional,
-      di.preparation_note
+      di.preparation_note,
+      EXISTS (
+        SELECT 1
+        FROM allergen_ingredients ai
+        WHERE ai.ingredient_id = i.id
+      ) AS is_allergen
     FROM dish_ingredients di
     INNER JOIN ingredients i
       ON i.id = di.ingredient_id
@@ -175,7 +181,12 @@ export async function replaceDishIngredients(
         di.unit,
         di.ingredient_role,
         di.is_optional,
-        di.preparation_note
+        di.preparation_note,
+        EXISTS (
+          SELECT 1
+          FROM allergen_ingredients ai
+          WHERE ai.ingredient_id = i.id
+        ) AS is_allergen
       FROM dish_ingredients di
       INNER JOIN ingredients i
         ON i.id = di.ingredient_id
