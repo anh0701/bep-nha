@@ -1,8 +1,8 @@
-
 export interface Ingredient {
   id: string
   name: string
-  ingredient_group: string | null
+  ingredient_category_id: string
+  ingredient_category_name: string
   default_unit: string
   is_active: boolean
   created_at?: string
@@ -11,12 +11,11 @@ export interface Ingredient {
 
 export interface IngredientListResponse {
   data: Ingredient[]
-  total: number
 }
 
 export interface IngredientFormData {
   name: string
-  ingredient_group: string | null
+  ingredient_category_id: string
   default_unit: string
 }
 

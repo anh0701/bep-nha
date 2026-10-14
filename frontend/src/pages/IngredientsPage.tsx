@@ -1,8 +1,6 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
-  CircleAlert,
   LoaderCircle,
   Pencil,
   Plus,
@@ -19,47 +17,31 @@ import {
   updateIngredientStatus,
 } from '../services/ingredient.service'
 
+import { getIngredientCategories } from '../services/ingredient-category.service'
+
+import IngredientFormModal from '../components/IngredientFormModal'
+
 import type {
   Ingredient,
   IngredientFormData,
 } from '../types/ingredient'
 
-const EMPTY_FORM: IngredientFormData = {
-  name: '',
-  ingredient_group: '',
-  default_unit: 'g',
-}
-
-const UNIT_OPTIONS = [
-  'g',
-  'kg',
-  'ml',
-  'l',
-  'cái',
-  'củ',
-  'quả',
-  'muỗng',
-  'tép',
-  'nhánh',
-  'bó',
-  'lát',
-  'cây',
-]
+import type { IngredientCategory } from '../types/ingredient-category'
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [categories, setCategories] = useState<IngredientCategory[]>([])
   const [search, setSearch] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
+
   const [showForm, setShowForm] = useState(false)
   const [editingIngredient, setEditingIngredient] =
     useState<Ingredient | null>(null)
-  const [formData, setFormData] =
-    useState<IngredientFormData>(EMPTY_FORM)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
 
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
@@ -79,8 +61,26 @@ export default function IngredientsPage() {
     }
   }
 
+  async function loadIngredientCategories() {
+    try {
+      setCategoriesLoading(true)
+      setCategoriesError(null)
+
+      const result = await getIngredientCategories()
+      setCategories(result.data)
+    } catch (err) {
+      console.error('Failed to load ingredient categories:', err)
+      setCategoriesError(
+        'Không thể tải danh mục nguyên liệu. Vui lòng thử lại.',
+      )
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadIngredients()
+    void loadIngredientCategories()
   }, [])
 
   const filteredIngredients = useMemo(() => {
@@ -88,10 +88,10 @@ export default function IngredientsPage() {
 
     return ingredients.filter((ingredient) => {
       const name = ingredient.name.toLocaleLowerCase('vi')
-      const group = (ingredient.ingredient_group ?? '')
+      const category = ingredient.ingredient_category_name
         .toLocaleLowerCase('vi')
 
-      return name.includes(keyword) || group.includes(keyword)
+      return name.includes(keyword) || category.includes(keyword)
     })
   }, [ingredients, search])
 
@@ -101,103 +101,39 @@ export default function IngredientsPage() {
 
   function openCreateForm() {
     setEditingIngredient(null)
-    setFormData(EMPTY_FORM)
-    setFormError(null)
     setShowForm(true)
   }
 
   function openEditForm(ingredient: Ingredient) {
     setEditingIngredient(ingredient)
-    setFormData({
-      name: ingredient.name,
-      ingredient_group: ingredient.ingredient_group ?? '',
-      default_unit: ingredient.default_unit,
-    })
-    setFormError(null)
     setShowForm(true)
   }
 
   function closeForm() {
-    if (saving) return
-
     setShowForm(false)
     setEditingIngredient(null)
-    setFormData(EMPTY_FORM)
-    setFormError(null)
   }
 
-  function updateForm<K extends keyof IngredientFormData>(
-    field: K,
-    value: IngredientFormData[K],
-  ) {
-    setFormData((current) => ({
-      ...current,
-      [field]: value,
-    }))
-  }
+  async function handleSaveIngredient(formData: IngredientFormData) {
+    const savedIngredient = editingIngredient
+      ? await updateIngredient(editingIngredient.id, formData)
+      : await createIngredient(formData)
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault()
-    setFormError(null)
-
-    const name = formData.name.trim()
-    const defaultUnit = formData.default_unit.trim()
-    const ingredientGroup = formData.ingredient_group?.trim() ?? ''
-
-    if (!name) {
-      setFormError('Vui lòng nhập tên nguyên liệu.')
-      return
-    }
-
-    if (!defaultUnit) {
-      setFormError('Vui lòng nhập đơn vị mặc định.')
-      return
-    }
-
-    const payload: IngredientFormData = {
-      name,
-      ingredient_group: ingredientGroup || null,
-      default_unit: defaultUnit,
-    }
-
-    try {
-      setSaving(true)
-
-      const savedIngredient = editingIngredient
-        ? await updateIngredient(editingIngredient.id, payload)
-        : await createIngredient(payload)
-
-      setIngredients((current) => {
-        const exists = current.some(
-          (item) => item.id === savedIngredient.id,
-        )
-
-        if (exists) {
-          return current.map((item) =>
-            item.id === savedIngredient.id
-              ? savedIngredient
-              : item,
-          )
-        }
-
-        return [savedIngredient, ...current]
-      })
-
-      setShowForm(false)
-      setEditingIngredient(null)
-      setFormData(EMPTY_FORM)
-    } catch (err) {
-      console.error('Failed to save ingredient:', err)
-      setFormError(
-        err instanceof Error
-          ? err.message
-          : 'Không thể lưu nguyên liệu. Vui lòng thử lại.',
+    setIngredients((current) => {
+      const exists = current.some(
+        (item) => item.id === savedIngredient.id,
       )
-    } finally {
-      setSaving(false)
-    }
+
+      if (exists) {
+        return current.map((item) =>
+          item.id === savedIngredient.id
+            ? savedIngredient
+            : item,
+        )
+      }
+
+      return [savedIngredient, ...current]
+    })
   }
 
   async function handleToggleStatus(ingredient: Ingredient) {
@@ -284,7 +220,7 @@ export default function IngredientsPage() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm tên hoặc nhóm nguyên liệu..."
+            placeholder="Tìm tên hoặc danh mục nguyên liệu..."
             aria-label="Tìm nguyên liệu"
             className="w-full rounded-2xl border border-beige bg-white py-3.5 pr-4 pl-11 text-sm text-ink outline-none transition placeholder:text-muted/80 focus:border-forest"
           />
@@ -376,7 +312,7 @@ export default function IngredientsPage() {
           <div className="overflow-hidden rounded-2xl border border-beige/80 bg-white">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-beige/80 px-4 py-3 text-xs font-semibold tracking-wide text-muted sm:grid-cols-[minmax(0,1fr)_minmax(100px,0.5fr)_minmax(70px,0.35fr)_auto] sm:px-5">
               <span>NGUYÊN LIỆU</span>
-              <span className="hidden sm:block">NHÓM</span>
+              <span className="hidden sm:block">DANH MỤC</span>
               <span className="hidden sm:block">ĐƠN VỊ</span>
               <span>THAO TÁC</span>
             </div>
@@ -392,9 +328,7 @@ export default function IngredientsPage() {
                   </h3>
 
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted sm:hidden">
-                    <span>
-                      {ingredient.ingredient_group || 'Chưa phân nhóm'}
-                    </span>
+                    <span>{ingredient.ingredient_category_name}</span>
                     <span>·</span>
                     <span>{ingredient.default_unit}</span>
                   </div>
@@ -418,7 +352,7 @@ export default function IngredientsPage() {
                 </div>
 
                 <span className="hidden text-sm text-muted sm:block">
-                  {ingredient.ingredient_group || '—'}
+                  {ingredient.ingredient_category_name}
                 </span>
 
                 <span className="hidden text-sm text-muted sm:block">
@@ -467,164 +401,16 @@ export default function IngredientsPage() {
         )}
       </section>
 
-      {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-5"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeForm()
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ingredient-form-title"
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-cream p-5 shadow-xl sm:rounded-3xl sm:p-7"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id="ingredient-form-title"
-                  className="text-xl font-bold text-ink"
-                >
-                  {editingIngredient
-                    ? 'Sửa nguyên liệu'
-                    : 'Thêm nguyên liệu'}
-                </h2>
-
-                <p className="mt-1 text-sm text-muted">
-                  Nhập thông tin để quản lý nguyên liệu trong kho.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeForm}
-                disabled={saving}
-                aria-label="Đóng biểu mẫu"
-                className="rounded-lg p-2 text-muted hover:bg-sage/60 disabled:opacity-50"
-              >
-                <X size={19} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-              <div className="space-y-2">
-                <label
-                  htmlFor="ingredient-name"
-                  className="block text-sm font-medium text-ink"
-                >
-                  Tên nguyên liệu <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  id="ingredient-name"
-                  autoFocus
-                  required
-                  maxLength={150}
-                  value={formData.name}
-                  onChange={(event) =>
-                    updateForm('name', event.target.value)
-                  }
-                  placeholder="Ví dụ: Thịt gà"
-                  className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-forest"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="ingredient-group"
-                  className="block text-sm font-medium text-ink"
-                >
-                  Nhóm nguyên liệu
-                </label>
-
-                <input
-                  id="ingredient-group"
-                  maxLength={100}
-                  value={formData.ingredient_group ?? ''}
-                  onChange={(event) =>
-                    updateForm('ingredient_group', event.target.value)
-                  }
-                  placeholder="Ví dụ: Thịt, Rau củ, Gia vị"
-                  className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-forest"
-                />
-
-                <p className="text-xs text-muted">
-                  Có thể để trống nếu chưa muốn phân nhóm.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="ingredient-unit"
-                  className="block text-sm font-medium text-ink"
-                >
-                  Đơn vị mặc định <span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  id="ingredient-unit"
-                  list="ingredient-unit-options"
-                  required
-                  maxLength={30}
-                  value={formData.default_unit}
-                  onChange={(event) =>
-                    updateForm('default_unit', event.target.value)
-                  }
-                  placeholder="Ví dụ: g"
-                  className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-forest"
-                />
-
-                <datalist id="ingredient-unit-options">
-                  {UNIT_OPTIONS.map((unit) => (
-                    <option key={unit} value={unit} />
-                  ))}
-                </datalist>
-
-                <p className="text-xs text-muted">
-                  Bạn có thể chọn gợi ý hoặc nhập đơn vị khác.
-                </p>
-              </div>
-
-              {formError && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700"
-                >
-                  <CircleAlert size={17} className="mt-0.5 shrink-0" />
-                  <p>{formError}</p>
-                </div>
-              )}
-
-              <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="rounded-xl border border-beige bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:bg-sage/30 disabled:opacity-50"
-                >
-                  Hủy
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving && (
-                    <LoaderCircle size={17} className="animate-spin" />
-                  )}
-                  {saving
-                    ? 'Đang lưu...'
-                    : editingIngredient
-                      ? 'Lưu thay đổi'
-                      : 'Thêm nguyên liệu'}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+      <IngredientFormModal
+        isOpen={showForm}
+        ingredient={editingIngredient}
+        categories={categories}
+        categoriesLoading={categoriesLoading}
+        categoriesError={categoriesError}
+        onRetryCategories={() => void loadIngredientCategories()}
+        onClose={closeForm}
+        onSubmit={handleSaveIngredient}
+      />
     </div>
   )
 }
