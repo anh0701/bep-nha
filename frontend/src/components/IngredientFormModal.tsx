@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CircleAlert, LoaderCircle, X } from 'lucide-react'
+import { AlertTriangle, CircleAlert, LoaderCircle, X } from 'lucide-react'
 
 import type {
     Ingredient,
@@ -24,6 +24,7 @@ const EMPTY_FORM: IngredientFormData = {
     name: '',
     ingredient_category_id: '',
     default_unit: 'g',
+    is_allergen: false,
 }
 
 const UNIT_OPTIONS = [
@@ -66,8 +67,9 @@ export default function IngredientFormModal({
                     name: ingredient.name,
                     ingredient_category_id: ingredient.ingredient_category_id,
                     default_unit: ingredient.default_unit,
+                    is_allergen: ingredient.is_allergen,
                 }
-                : EMPTY_FORM,
+                : { ...EMPTY_FORM },
         )
         setFormError(null)
     }, [isOpen, ingredient])
@@ -119,6 +121,7 @@ export default function IngredientFormModal({
             name,
             ingredient_category_id: categoryId,
             default_unit: defaultUnit,
+            is_allergen: formData.is_allergen,
         }
 
         try {
@@ -200,7 +203,6 @@ export default function IngredientFormModal({
                         />
                     </div>
 
-
                     <div className="space-y-2">
                         <label
                             htmlFor="ingredient-category"
@@ -222,7 +224,11 @@ export default function IngredientFormModal({
                                     ? 'Đang tải danh mục...'
                                     : 'Chọn danh mục nguyên liệu'
                             }
-                            disabled={categoriesLoading || !!categoriesError || categories.length === 0}
+                            disabled={
+                                categoriesLoading ||
+                                !!categoriesError ||
+                                categories.length === 0
+                            }
                             required
                         />
 
@@ -245,7 +251,6 @@ export default function IngredientFormModal({
                             </p>
                         )}
                     </div>
-
 
                     <div className="space-y-2">
                         <label
@@ -278,6 +283,44 @@ export default function IngredientFormModal({
                             Bạn có thể chọn gợi ý hoặc nhập đơn vị khác.
                         </p>
                     </div>
+
+                    <label
+                        htmlFor="ingredient-is-allergen"
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                            formData.is_allergen
+                                ? 'border-amber-300 bg-amber-50'
+                                : 'border-beige bg-white hover:bg-sage/20'
+                        }`}
+                    >
+                        <input
+                            id="ingredient-is-allergen"
+                            type="checkbox"
+                            checked={formData.is_allergen}
+                            onChange={(event) =>
+                                updateForm('is_allergen', event.target.checked)
+                            }
+                            className="mt-1 size-4 shrink-0 accent-forest"
+                        />
+
+                        <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                                <AlertTriangle
+                                    size={17}
+                                    className={
+                                        formData.is_allergen
+                                            ? 'text-amber-700'
+                                            : 'text-muted'
+                                    }
+                                />
+                                Nguyên liệu gây dị ứng
+                            </span>
+
+                            <span className="mt-1 block text-xs leading-5 text-muted">
+                                Đánh dấu nếu nguyên liệu có thể gây dị ứng, để
+                                Bếp Nhà nhận diện khi quản lý món ăn.
+                            </span>
+                        </span>
+                    </label>
 
                     {formError && (
                         <div

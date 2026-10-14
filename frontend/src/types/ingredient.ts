@@ -5,6 +5,7 @@ export interface Ingredient {
   ingredient_category_name: string
   default_unit: string
   is_active: boolean
+  is_allergen: boolean
   created_at?: string
   updated_at?: string
 }
@@ -17,6 +18,7 @@ export interface IngredientFormData {
   name: string
   ingredient_category_id: string
   default_unit: string
+  is_allergen: boolean
 }
 
 export interface IngredientStatusInput {

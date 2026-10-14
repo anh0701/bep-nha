@@ -327,6 +327,12 @@ export default function IngredientsPage() {
                     {ingredient.name}
                   </h3>
 
+                  {ingredient.is_allergen && (
+                    <span className="mt-1.5 inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+                      Gây dị ứng
+                    </span>
+                  )}
+
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted sm:hidden">
                     <span>{ingredient.ingredient_category_name}</span>
                     <span>·</span>
