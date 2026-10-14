@@ -183,8 +183,6 @@ CREATE TABLE IF NOT EXISTS menu_dishes (
 CREATE INDEX IF NOT EXISTS idx_menu_dishes_dish_id
     ON menu_dishes (dish_id);
 
-
-
 SELECT
     table_name,
     column_name,
@@ -232,8 +230,6 @@ CREATE INDEX IF NOT EXISTS idx_cooking_session_dishes_dish_id
 select d.* from dishes d where d.is_active = false ;
 
 
-BEGIN;
-
 -- 1. Thêm thông tin nguồn và thời gian cập nhật.
 ALTER TABLE menus
     ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'random',
@@ -254,7 +250,65 @@ CREATE UNIQUE INDEX menus_random_signature_unique
     ON menus (dish_signature)
     WHERE source = 'random';
 
-COMMIT;
+
+-- 1. Danh mục nguyên liệu
+CREATE TABLE public.ingredients (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name varchar(100) NOT NULL,
+    ingredient_group varchar(50),
+    default_unit varchar(20) NOT NULL DEFAULT 'g',
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT ingredients_name_unique UNIQUE (name),
+    CONSTRAINT ingredients_name_not_blank
+        CHECK (length(trim(name)) > 0),
+    CONSTRAINT ingredients_default_unit_not_blank
+        CHECK (length(trim(default_unit)) > 0)
+);
+
+-- 2. Nguyên liệu và định lượng theo từng món
+CREATE TABLE public.dish_ingredients (
+    dish_id bigint NOT NULL
+        REFERENCES public.dishes(id) ON DELETE CASCADE,
+
+    ingredient_id bigint NOT NULL
+        REFERENCES public.ingredients(id) ON DELETE RESTRICT,
+
+    quantity_per_person numeric(10, 3) NOT NULL,
+    unit varchar(20) NOT NULL,
+
+    ingredient_role varchar(10) NOT NULL DEFAULT 'minor',
+    is_optional boolean NOT NULL DEFAULT false,
+    preparation_note text,
+
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (dish_id, ingredient_id),
+
+    CONSTRAINT dish_ingredients_quantity_positive
+        CHECK (quantity_per_person > 0),
+
+    CONSTRAINT dish_ingredients_unit_not_blank
+        CHECK (length(trim(unit)) > 0),
+
+    CONSTRAINT dish_ingredients_role_check
+        CHECK (ingredient_role IN ('main', 'minor'))
+);
+
+CREATE INDEX idx_dish_ingredients_ingredient_id
+    ON public.dish_ingredients(ingredient_id);
+
+-- 3. Nguyên liệu người dùng cần tránh
+CREATE TABLE public.allergen_ingredients (
+    ingredient_id bigint PRIMARY KEY
+        REFERENCES public.ingredients(id) ON DELETE CASCADE,
+
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
 
 -----------------------------------------------------------------------------------------
 
