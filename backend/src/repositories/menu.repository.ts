@@ -12,17 +12,52 @@ export interface SaveMenuResult {
   reused: boolean
 }
 
+export interface SavedMenuDish {
+  id: string
+  name: string
+  category_id: string
+  category: string
+}
+
+export interface SavedMenuWithDishes {
+  id: string
+  name: string | null
+  source: 'random' | 'manual'
+  created_at: Date
+  updated_at: Date
+  items: SavedMenuDish[]
+}
+
+export interface SavedMenuMutationResult {
+  id: string
+  name: string
+  source: 'random' | 'manual'
+  created_at: Date
+  updated_at: Date
+}
+
+export interface CreateManualMenuResult {
+  id: string
+  name: string
+  source: 'manual'
+  created_at: Date
+  updated_at: Date
+}
+
+/**
+ * Lưu thực đơn random.
+ * Các thực đơn có cùng tập hợp ID món sẽ dùng chung một bản ghi,
+ * không phụ thuộc thứ tự các món.
+ */
 export async function saveMenu(
   dishIds: string[],
 ): Promise<SaveMenuResult> {
-  // Loại bỏ ID trùng và giữ thứ tự món ban đầu.
   const orderedIds = [...new Set(dishIds)]
 
   if (orderedIds.length === 0) {
     throw new Error('Cannot save an empty menu')
   }
 
-  // Chữ ký chỉ phụ thuộc vào tập hợp ID, không phụ thuộc thứ tự.
   const signature = [...orderedIds]
     .sort((a, b) => {
       const idA = BigInt(a)
@@ -37,7 +72,6 @@ export async function saveMenu(
   try {
     await client.query('BEGIN')
 
-    // Nếu chữ ký đã tồn tại, PostgreSQL không tạo bản ghi mới.
     const insertResult = await client.query<SavedMenu>(
       `
       INSERT INTO menus (dish_signature)
@@ -58,7 +92,6 @@ export async function saveMenu(
       menu = insertResult.rows[0]
       reused = false
 
-      // Chỉ thêm món khi thực đơn thực sự được tạo mới.
       for (const [index, dishId] of orderedIds.entries()) {
         await client.query(
           `
@@ -69,7 +102,6 @@ export async function saveMenu(
         )
       }
     } else {
-      // Thực đơn đã tồn tại: lấy bản ghi cũ và giữ nguyên ngày tạo.
       const existingResult = await client.query<SavedMenu>(
         `
         SELECT
@@ -101,24 +133,12 @@ export async function saveMenu(
   }
 }
 
-
-export interface SavedMenuDish {
-  id: string
-  name: string
-  category_id: string
-  category: string
-}
-
-export interface SavedMenuWithDishes {
-  id: string
-  name: string | null
-  source: 'random' | 'manual'
-  created_at: Date
-  updated_at: Date
-  items: SavedMenuDish[]
-}
-
-export async function findAllSavedMenus(): Promise<SavedMenuWithDishes[]> {
+/**
+ * Lấy danh sách thực đơn đã lưu.
+ */
+export async function findAllSavedMenus(): Promise<
+  SavedMenuWithDishes[]
+> {
   const result = await pool.query<SavedMenuWithDishes>(`
     SELECT
       m.id::text AS id,
@@ -152,7 +172,9 @@ export async function findAllSavedMenus(): Promise<SavedMenuWithDishes[]> {
   return result.rows
 }
 
-
+/**
+ * Lấy chi tiết một thực đơn.
+ */
 export async function findSavedMenuById(
   id: string,
 ): Promise<SavedMenuWithDishes | null> {
@@ -192,15 +214,9 @@ export async function findSavedMenuById(
   return result.rows[0] ?? null
 }
 
-
-export interface CreateManualMenuResult {
-  id: string
-  name: string
-  source: 'manual'
-  created_at: Date
-  updated_at: Date
-}
-
+/**
+ * Tạo thực đơn thủ công.
+ */
 export async function createManualMenu(
   name: string,
   dishIds: string[],
@@ -225,7 +241,6 @@ export async function createManualMenu(
   try {
     await client.query('BEGIN')
 
-    // Chỉ cho phép thêm món đang hoạt động.
     const dishResult = await client.query<{ id: string }>(
       `
       SELECT id::text AS id
@@ -242,7 +257,7 @@ export async function createManualMenu(
       )
     }
 
-    // Giá trị riêng giúp không va chạm với chữ ký của menu random.
+    // Chữ ký riêng, không trùng với chữ ký của thực đơn random.
     const signature = `manual:${randomUUID()}`
 
     const menuResult = await client.query<CreateManualMenuResult>(
@@ -290,12 +305,15 @@ export async function createManualMenu(
   }
 }
 
-
-export async function updateManualMenu(
+/**
+ * Cập nhật thực đơn đã lưu, bất kể nguồn gốc random hay manual.
+ * Khi người dùng chủ động chỉnh sửa, thực đơn chuyển thành manual.
+ */
+export async function updateSavedMenu(
   id: string,
   name: string,
   dishIds: string[],
-): Promise<CreateManualMenuResult | null> {
+): Promise<SavedMenuMutationResult | null> {
   const menuName = name.trim()
   const orderedIds = [...new Set(dishIds)]
 
@@ -312,12 +330,11 @@ export async function updateManualMenu(
   try {
     await client.query('BEGIN')
 
-    const existing = await client.query(
+    const existing = await client.query<{ id: string }>(
       `
       SELECT id
       FROM menus
       WHERE id = $1::bigint
-        AND source = 'manual'
       FOR UPDATE
       `,
       [id],
@@ -344,13 +361,16 @@ export async function updateManualMenu(
       )
     }
 
-    const menuResult = await client.query<CreateManualMenuResult>(
+    const signature = `manual:${randomUUID()}`
+
+    const menuResult = await client.query<SavedMenuMutationResult>(
       `
       UPDATE menus
       SET name = $2,
+          source = 'manual',
+          dish_signature = $3,
           updated_at = NOW()
       WHERE id = $1::bigint
-        AND source = 'manual'
       RETURNING
         id::text AS id,
         name,
@@ -358,7 +378,7 @@ export async function updateManualMenu(
         created_at,
         updated_at
       `,
-      [id, menuName],
+      [id, menuName, signature],
     )
 
     await client.query(
@@ -387,15 +407,16 @@ export async function updateManualMenu(
   }
 }
 
-
-export async function deleteManualMenu(
+/**
+ * Xóa thực đơn random hoặc manual.
+ */
+export async function deleteSavedMenu(
   id: string,
 ): Promise<boolean> {
   const result = await pool.query(
     `
     DELETE FROM menus
     WHERE id = $1::bigint
-      AND source = 'manual'
     RETURNING id
     `,
     [id],

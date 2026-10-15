@@ -1,13 +1,9 @@
-
 import {
   findAllSavedMenus,
   findSavedMenuById,
-} from '../repositories/menu.repository.js'
-
-import {
   createManualMenu as createManualMenuRepository,
-  updateManualMenu as updateManualMenuRepository,
-  deleteManualMenu as deleteManualMenuRepository,
+  updateSavedMenu as updateSavedMenuRepository,
+  deleteSavedMenu as deleteSavedMenuRepository,
 } from '../repositories/menu.repository.js'
 
 export async function getAllSavedMenus() {
@@ -25,14 +21,14 @@ export async function createManualMenu(
   return createManualMenuRepository(name, dishIds)
 }
 
-export async function updateManualMenu(
+export async function updateSavedMenu(
   id: string,
   name: string,
   dishIds: string[],
 ) {
-  return updateManualMenuRepository(id, name, dishIds)
+  return updateSavedMenuRepository(id, name, dishIds)
 }
 
-export async function deleteManualMenu(id: string) {
-  return deleteManualMenuRepository(id)
+export async function deleteSavedMenu(id: string) {
+  return deleteSavedMenuRepository(id)
 }

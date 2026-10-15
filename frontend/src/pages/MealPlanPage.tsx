@@ -88,7 +88,7 @@ export default function MealPlanPage() {
     }
 
     function openDeleteModal(menu: SavedMenu) {
-        if (menu.source !== 'manual' || deletingMenuId !== null) return
+        if (deletingMenuId !== null) return
 
         setMenuToDelete(menu)
         setDeleteError(null)
@@ -98,7 +98,6 @@ export default function MealPlanPage() {
     async function handleDeleteMenu() {
         if (
             !menuToDelete ||
-            menuToDelete.source !== 'manual' ||
             deletingMenuId !== null
         ) {
             return
@@ -311,26 +310,25 @@ export default function MealPlanPage() {
                                         )}
                                     </div>
 
-                                    {menu.source === 'manual' && (
-                                        <div className="mt-5 flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => openMenuForm(menu)}
-                                                className="flex-1 rounded-xl border border-beige px-3 py-2.5 text-sm font-semibold transition hover:border-forest hover:text-forest"
-                                            >
-                                                Sửa
-                                            </button>
+                                    <div className="mt-5 flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => openMenuForm(menu)}
+                                            className="flex-1 rounded-xl border border-beige px-3 py-2.5 text-sm font-semibold transition hover:border-forest hover:text-forest"
+                                        >
+                                            Sửa
+                                        </button>
 
-                                            <button
-                                                type="button"
-                                                disabled={deletingMenuId !== null}
-                                                onClick={() => openDeleteModal(menu)}
-                                                className="flex-1 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                                            >
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    )}
+                                        <button
+                                            type="button"
+                                            disabled={deletingMenuId !== null}
+                                            onClick={() => openDeleteModal(menu)}
+                                            className="flex-1 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
+
 
                                     <button
                                         type="button"

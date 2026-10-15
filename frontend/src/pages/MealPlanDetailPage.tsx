@@ -203,7 +203,7 @@ export default function MealPlanDetailPage() {
     }
 
     function openEditForm() {
-        if (!menu || menu.source !== 'manual') return
+        if (!menu) return
 
         setError('')
         setNotice('')
@@ -220,14 +220,14 @@ export default function MealPlanDetailPage() {
     }
 
     function openDeleteModal() {
-        if (!menu || menu.source !== 'manual') return
+        if (!menu) return
 
         setDeleteError(null)
         setIsDeleteModalOpen(true)
     }
 
     async function handleDeleteMenu() {
-        if (!menu || menu.source !== 'manual' || isDeletingMenu) return
+        if (!menu || isDeletingMenu) return
 
         setIsDeletingMenu(true)
         setDeleteError(null)
@@ -359,25 +359,24 @@ export default function MealPlanDetailPage() {
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                                {menu.source === 'manual' && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={openEditForm}
-                                            className="rounded-xl border border-beige px-4 py-3 text-sm font-semibold hover:border-forest hover:text-forest"
-                                        >
-                                            Sửa thực đơn
-                                        </button>
 
-                                        <button
-                                            type="button"
-                                            onClick={openDeleteModal}
-                                            className="rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50"
-                                        >
-                                            Xóa
-                                        </button>
-                                    </>
-                                )}
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={openEditForm}
+                                        className="rounded-xl border border-beige px-4 py-3 text-sm font-semibold hover:border-forest hover:text-forest"
+                                    >
+                                        Sửa thực đơn
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={openDeleteModal}
+                                        className="rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50"
+                                    >
+                                        Xóa
+                                    </button>
+                                </>
 
                                 <button
                                     type="button"
