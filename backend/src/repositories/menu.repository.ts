@@ -88,29 +88,41 @@ export async function saveMenu(
     let menu: SavedMenu
     let reused: boolean
 
+
     if (insertResult.rows.length > 0) {
       menu = insertResult.rows[0]
       reused = false
 
+      // Đặt tên thực đơn theo ID vừa được tạo.
+      await client.query(
+        `
+    UPDATE menus
+    SET name = $2,
+        updated_at = NOW()
+    WHERE id = $1::bigint
+    `,
+        [menu.id, `Thực đơn #${menu.id}`],
+      )
+
       for (const [index, dishId] of orderedIds.entries()) {
         await client.query(
           `
-          INSERT INTO menu_dishes (menu_id, dish_id, position)
-          VALUES ($1, $2, $3)
-          `,
+      INSERT INTO menu_dishes (menu_id, dish_id, position)
+      VALUES ($1, $2, $3)
+      `,
           [menu.id, dishId, index + 1],
         )
       }
     } else {
       const existingResult = await client.query<SavedMenu>(
         `
-        SELECT
-          id::text AS id,
-          dish_signature,
-          created_at
-        FROM menus
-        WHERE dish_signature = $1
-        `,
+    SELECT
+      id::text AS id,
+      dish_signature,
+      created_at
+    FROM menus
+    WHERE dish_signature = $1
+    `,
         [signature],
       )
 
