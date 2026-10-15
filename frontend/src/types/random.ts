@@ -9,6 +9,8 @@ export interface RandomDish extends Dish {
   meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side'
   category_cook_count: string
   cooked_recently: boolean
+  allergen_warnings: string[]
+
 }
 
 export interface RandomRequest {

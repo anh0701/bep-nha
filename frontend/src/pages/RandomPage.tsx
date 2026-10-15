@@ -364,7 +364,7 @@ export default function RandomPage() {
                                     includeAll
                                     allLabel="Tất cả danh mục"
                                     ariaLabel="Lọc theo danh mục"
-                                    />
+                                />
                             </div>
                         )}
 
@@ -520,6 +520,27 @@ export default function RandomPage() {
                                                     ? roleLabels[dish.meal_role]
                                                     : dish.category}
                                             </p>
+
+
+                                            {dish.allergen_warnings.length > 0 && (
+                                                <div
+                                                    role="note"
+                                                    className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-800"
+                                                >
+                                                    <AlertCircle
+                                                        size={15}
+                                                        className="mt-0.5 shrink-0"
+                                                    />
+
+                                                    <span>
+                                                        <span className="font-semibold">
+                                                            Cảnh báo dị ứng:
+                                                        </span>{' '}
+                                                        {dish.allergen_warnings.join(', ')}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                         </div>
 
                                         {dish.cooked_recently && (

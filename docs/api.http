@@ -86,7 +86,7 @@ Accept: application/json
 
 {
   "mode": "single",
-  "dish_ids": ["74", "75", "79"]
+  "dish_ids": ["119", "33", "25"]
 }
 
 ###

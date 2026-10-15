@@ -349,6 +349,30 @@ ON CONFLICT (name) DO NOTHING;
 
 ALTER TABLE ingredients DROP COLUMN ingredient_group;
 
+SELECT
+        di.ingredient_id::text AS ingredient_id,
+        i.name AS ingredient_name,
+        i.ingredient_category_id::text AS ingredient_category_id,
+        ic.name AS ingredient_category_name,
+        di.quantity_per_person,
+        di.unit,
+        di.ingredient_role,
+        di.is_optional,
+        di.preparation_note,
+        i.is_allergen
+      FROM dish_ingredients di
+      INNER JOIN ingredients i
+        ON i.id = di.ingredient_id
+      INNER JOIN ingredient_categories ic
+        ON ic.id = i.ingredient_category_id
+      WHERE di.dish_id = 119
+      ORDER BY
+        CASE di.ingredient_role
+          WHEN 'main' THEN 0
+          ELSE 1
+        END,
+        i.name ASC
+
 
 -----------------------------------------------------------------------------------------
 

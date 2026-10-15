@@ -93,6 +93,7 @@ export interface RandomDishCandidate extends Dish {
   meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side'
   category_cook_count: string
   cooked_recently: boolean
+  allergen_warnings: string[]
 }
 
 export async function findRandomCandidates(
@@ -129,7 +130,25 @@ export async function findRandomCandidates(
       COALESCE(
         dh.last_cooked_on >= CURRENT_DATE - 2,
         FALSE
-      ) AS cooked_recently
+      ) AS cooked_recently,
+
+      COALESCE(
+      (
+        SELECT ARRAY_AGG(DISTINCT i.name ORDER BY i.name)
+        FROM dish_ingredients di
+        INNER JOIN ingredients i
+          ON i.id = di.ingredient_id
+        WHERE di.dish_id = d.id
+          AND di.ingredient_role = 'minor'
+          AND EXISTS (
+            SELECT 1
+            FROM allergen_ingredients ai
+            WHERE ai.ingredient_id = i.id
+          )
+        ),
+        ARRAY[]::text[]
+      ) AS allergen_warnings
+
     FROM dishes d
     INNER JOIN categories c
       ON c.id = d.category_id
@@ -137,10 +156,23 @@ export async function findRandomCandidates(
       ON ch.category_id = d.category_id
     LEFT JOIN dish_history dh
       ON dh.dish_id = d.id
+
     WHERE d.is_active = TRUE
       AND d.meal_role IS NOT NULL
+
+      -- Loại món có ít nhất một nguyên liệu chính gây dị ứng.
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dish_ingredients di
+        INNER JOIN allergen_ingredients ai
+          ON ai.ingredient_id = di.ingredient_id
+        WHERE di.dish_id = d.id
+          AND di.ingredient_role = 'main'
+      )
+
       AND ($1::bigint IS NULL OR d.category_id = $1::bigint)
       AND ($2::bigint[] IS NULL OR d.id = ANY($2::bigint[]))
+
     ORDER BY d.id
     `,
     [categoryId ?? null, dishIds ?? null],
