@@ -359,7 +359,11 @@ SELECT
         di.ingredient_role,
         di.is_optional,
         di.preparation_note,
-        i.is_allergen
+        EXISTS (
+          SELECT 1
+          FROM allergen_ingredients ai
+          WHERE ai.ingredient_id = i.id
+        ) AS is_allergen
       FROM dish_ingredients di
       INNER JOIN ingredients i
         ON i.id = di.ingredient_id
@@ -374,6 +378,25 @@ SELECT
         i.name ASC
 
 
+SELECT
+    d.meal_role,
+    COUNT(*) AS total_active,
+    COUNT(*) FILTER (
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM dish_ingredients di
+            JOIN allergen_ingredients ai
+                ON ai.ingredient_id = di.ingredient_id
+            WHERE di.dish_id = d.id
+              AND di.ingredient_role = 'main'
+        )
+    ) AS eligible_after_allergen_filter
+FROM dishes d
+WHERE d.is_active = TRUE
+  AND d.meal_role IS NOT NULL
+GROUP BY d.meal_role
+ORDER BY d.meal_role;
+        
 -----------------------------------------------------------------------------------------
 
 /*

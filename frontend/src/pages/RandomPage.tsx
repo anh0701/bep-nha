@@ -16,6 +16,7 @@ import type {
     RandomResult,
 } from '../types/random'
 import CategorySelect from '../components/CategorySelect'
+import DishDetailModal from '../components/DishDetailModal'
 
 type SingleFilter = 'all' | 'category' | 'selected'
 
@@ -67,6 +68,7 @@ export default function RandomPage() {
     const [hasRandomized, setHasRandomized] = useState(false)
     const [randomLoading, setRandomLoading] = useState(false)
     const [randomError, setRandomError] = useState<string | null>(null)
+    const [detailDish, setDetailDish] = useState<Dish | null>(null)
 
     useEffect(() => {
         if (!result) return
@@ -511,9 +513,21 @@ export default function RandomPage() {
                                         </div>
 
                                         <div className="min-w-0 flex-1">
-                                            <p className="font-semibold text-ink">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setDetailDish({
+                                                        id: dish.id,
+                                                        name: dish.name,
+                                                        category_id: dish.category_id,
+                                                        category: dish.category,
+                                                        is_active: dish.is_active,
+                                                    })
+                                                }
+                                                className="text-left font-semibold text-ink transition hover:text-forest hover:underline focus-visible:outline-none focus-visible:underline"
+                                            >
                                                 {dish.name}
-                                            </p>
+                                            </button>
 
                                             <p className="mt-1 text-xs text-muted">
                                                 {result.mode === 'meal'
@@ -571,6 +585,13 @@ export default function RandomPage() {
                         )}
                     </div>
                 </section>
+            )}
+
+            {detailDish && (
+                <DishDetailModal
+                    dish={detailDish}
+                    onClose={() => setDetailDish(null)}
+                />
             )}
 
         </div>

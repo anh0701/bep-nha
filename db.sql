@@ -91,6 +91,7 @@ CREATE TABLE public.menus (
 	"name" varchar(100) NULL,
 	"source" varchar(20) DEFAULT 'random'::character varying NOT NULL,
 	updated_at timestamptz DEFAULT now() NOT NULL,
+	CONSTRAINT menus_dish_signature_unique UNIQUE (dish_signature),
 	CONSTRAINT menus_pkey PRIMARY KEY (id),
 	CONSTRAINT menus_source_check CHECK (((source)::text = ANY ((ARRAY['random'::character varying, 'manual'::character varying])::text[])))
 );
