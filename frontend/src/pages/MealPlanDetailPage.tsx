@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import {
+    AlertTriangle,
     ArrowLeft,
     CalendarDays,
     Check,
@@ -25,6 +26,8 @@ import {
 
 import MenuFormModal from '../components/MenuFormModal'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import DishDetailModal from '../components/DishDetailModal'
+import type { Dish } from '../types/dish'
 
 function getLocalDateTime(): string {
     const now = new Date()
@@ -72,6 +75,8 @@ export default function MealPlanDetailPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isDeletingMenu, setIsDeletingMenu] = useState(false)
     const [deleteError, setDeleteError] = useState<string | null>(null)
+    const [detailDish, setDetailDish] = useState<Dish | null>(null)
+
 
     const loadMenu = useCallback(async () => {
         if (!id) {
@@ -413,14 +418,35 @@ export default function MealPlanDetailPage() {
                                                 </span>
                                             </div>
 
-                                            <div className="min-w-0">
-                                                <h2 className="font-semibold">
+                                            <div className="flex min-w-0 flex-col items-start">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setDetailDish({
+                                                            id: dish.id,
+                                                            name: dish.name,
+                                                            category_id: dish.category_id,
+                                                            category: dish.category,
+                                                            is_active: dish.is_active,
+                                                        })
+                                                    }
+                
+                                                    className="text-left !text-lg !font-semibold text-ink transition hover:text-forest hover:underline focus-visible:outline-none focus-visible:underline"
+                                                >
                                                     {dish.name}
-                                                </h2>
+                                                </button>
+
 
                                                 <p className="mt-1 text-sm text-muted">
                                                     {dish.category}
                                                 </p>
+
+                                                {dish.has_allergen && (
+                                                    <span className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                                                        <AlertTriangle size={14} aria-hidden="true" />
+                                                        Có nguyên liệu gây dị ứng
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -625,6 +651,13 @@ export default function MealPlanDetailPage() {
                         setIsDeleteModalOpen(false)
                         setDeleteError(null)
                     }}
+                />
+            )}
+
+            {detailDish && (
+                <DishDetailModal
+                    dish={detailDish}
+                    onClose={() => setDetailDish(null)}
                 />
             )}
         </main>

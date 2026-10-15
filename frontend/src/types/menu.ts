@@ -1,9 +1,11 @@
+import type { Dish } from "./dish"
 
-export interface SavedMenuDish {
+export interface SavedMenuDish extends Dish{
   id: string
   name: string
   category_id: string
   category: string
+  has_allergen: boolean
 }
 
 export interface SavedMenu {
