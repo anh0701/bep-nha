@@ -17,6 +17,7 @@ export interface SavedMenuDish {
   name: string
   category_id: string
   category: string
+  has_allergen: boolean
 }
 
 export interface SavedMenuWithDishes {
@@ -164,7 +165,18 @@ export async function findAllSavedMenus(): Promise<
             'id', d.id::text,
             'name', d.name,
             'category_id', d.category_id::text,
-            'category', c.name
+            'category', c.name,
+            'has_allergen',
+            EXISTS (
+                SELECT 1
+                FROM dish_ingredients di
+                JOIN allergen_ingredients ai
+                    ON ai.ingredient_id = di.ingredient_id
+                JOIN ingredients i
+                    ON i.id = di.ingredient_id
+                WHERE di.dish_id = d.id
+                  AND i.is_active = TRUE
+            )
           )
           ORDER BY md.position
         ) FILTER (WHERE d.id IS NOT NULL),
@@ -204,7 +216,18 @@ export async function findSavedMenuById(
             'id', d.id::text,
             'name', d.name,
             'category_id', d.category_id::text,
-            'category', c.name
+            'category', c.name,
+            'has_allergen',
+            EXISTS (
+                SELECT 1
+                FROM dish_ingredients di
+                JOIN allergen_ingredients ai
+                    ON ai.ingredient_id = di.ingredient_id
+                JOIN ingredients i
+                    ON i.id = di.ingredient_id
+                WHERE di.dish_id = d.id
+                  AND i.is_active = TRUE
+            )
           )
           ORDER BY md.position
         ) FILTER (WHERE d.id IS NOT NULL),

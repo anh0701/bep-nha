@@ -396,6 +396,15 @@ WHERE d.is_active = TRUE
   AND d.meal_role IS NOT NULL
 GROUP BY d.meal_role
 ORDER BY d.meal_role;
+
+SELECT dish_signature, COUNT(*)
+FROM menus
+GROUP BY dish_signature
+HAVING COUNT(*) > 1;
+
+ALTER TABLE menus
+ADD CONSTRAINT menus_dish_signature_unique
+UNIQUE (dish_signature);
         
 -----------------------------------------------------------------------------------------
 

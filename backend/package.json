@@ -11,7 +11,7 @@
 
     "docker:up": "podman-compose -f ../compose.yaml up -d",
     "docker:down": "podman-compose -f ../compose.yaml down",
-    "dev:all": "podman-compose -f ../compose.yaml up -d && npm run dev"
+    "dev:a": "podman-compose -f ../compose.yaml up -d && npm run dev"
   },
   "keywords": [],
   "author": "",
