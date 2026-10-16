@@ -93,7 +93,7 @@ Accept: application/json
 GET {{baseUrl}}/api/menus
 
 ###
-GET {{baseUrl}}/api/menus/1
+GET {{baseUrl}}/api/menus/10
 
 ### 
 # POST {{baseUrl}}/api/cooking-sessions

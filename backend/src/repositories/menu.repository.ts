@@ -18,6 +18,7 @@ export interface SavedMenuDish {
   category_id: string
   category: string
   has_allergen: boolean
+  is_active: boolean
 }
 
 export interface SavedMenuWithDishes {
@@ -217,6 +218,7 @@ export async function findSavedMenuById(
             'name', d.name,
             'category_id', d.category_id::text,
             'category', c.name,
+            'is_active', d.is_active,
             'has_allergen',
             EXISTS (
                 SELECT 1
