@@ -5,9 +5,10 @@ import {
   deactivateDish as disableDish,
   findRandomCandidates,
   findDishById,
+  findDishesByIngredients,
 } from '../repositories/dish.repository.js'
 
-import type { RandomDishCandidate } from '../repositories/dish.repository.js'
+import type { IngredientMatchDish, RandomDishCandidate } from '../repositories/dish.repository.js'
 
 import { saveMenu } from '../repositories/menu.repository.js'
 
@@ -210,4 +211,16 @@ export async function randomize(options: RandomOptions) {
 
 export async function getDishById(id: string) {
   return findDishById(id)
+}
+
+export async function searchDishesByIngredients(
+  ingredientIds: string[],
+): Promise<IngredientMatchDish[]> {
+  const uniqueIds = [...new Set(ingredientIds)]
+
+  if (uniqueIds.length === 0) {
+    return []
+  }
+
+  return findDishesByIngredients(uniqueIds)
 }

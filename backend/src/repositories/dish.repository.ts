@@ -200,3 +200,107 @@ export async function findDishById(id: string): Promise<Dish | null> {
 
   return result.rows[0] ?? null
 }
+
+export interface IngredientMatchDish {
+  id: string
+  name: string
+  category_id: string
+  category: string
+  meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side' | null
+  matched_count: number
+  total_ingredients: number
+  missing_count: number
+  matched_ingredients: string[]
+  missing_ingredients: string[]
+  match_percentage: number
+  can_cook_now: boolean
+}
+
+export async function findDishesByIngredients(
+  ingredientIds: string[],
+): Promise<IngredientMatchDish[]> {
+  const result = await pool.query<IngredientMatchDish>(
+    `
+    WITH selected_ingredients AS (
+      SELECT DISTINCT unnest($1::bigint[]) AS ingredient_id
+    ),
+    dish_matches AS (
+      SELECT
+        d.id::text AS id,
+        d.name,
+        d.category_id::text AS category_id,
+        c.name AS category,
+        d.meal_role,
+
+        COUNT(di.ingredient_id)::int AS total_ingredients,
+
+        COUNT(di.ingredient_id) FILTER (
+          WHERE si.ingredient_id IS NOT NULL
+        )::int AS matched_count,
+
+        COUNT(di.ingredient_id) FILTER (
+          WHERE si.ingredient_id IS NULL
+        )::int AS missing_count,
+
+        COALESCE(
+          ARRAY_AGG(DISTINCT i.name ORDER BY i.name)
+            FILTER (WHERE si.ingredient_id IS NOT NULL),
+          ARRAY[]::text[]
+        ) AS matched_ingredients,
+
+        COALESCE(
+          ARRAY_AGG(DISTINCT i.name ORDER BY i.name)
+            FILTER (WHERE si.ingredient_id IS NULL),
+          ARRAY[]::text[]
+        ) AS missing_ingredients
+
+      FROM dishes d
+      INNER JOIN categories c
+        ON c.id = d.category_id
+      INNER JOIN dish_ingredients di
+        ON di.dish_id = d.id
+      INNER JOIN ingredients i
+        ON i.id = di.ingredient_id
+      LEFT JOIN selected_ingredients si
+        ON si.ingredient_id = di.ingredient_id
+        AND EXISTS (
+          SELECT 1
+          FROM ingredients active_i
+          WHERE active_i.id = si.ingredient_id
+            AND active_i.is_active = TRUE
+        )
+
+      WHERE d.is_active = TRUE
+
+      GROUP BY
+        d.id,
+        d.name,
+        d.category_id,
+        c.name,
+        d.meal_role
+    )
+    SELECT
+      *,
+      ROUND(
+        matched_count * 100.0
+        / NULLIF(total_ingredients, 0),
+        1
+      )::float8 AS match_percentage,
+
+      (missing_count = 0) AS can_cook_now
+
+    FROM dish_matches
+    WHERE matched_count > 0
+
+    ORDER BY
+      can_cook_now DESC,
+      missing_count ASC,
+      matched_count DESC,
+      match_percentage DESC,
+      name ASC
+    `,
+    [ingredientIds],
+  )
+
+  return result.rows
+}

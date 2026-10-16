@@ -12,6 +12,7 @@ import MealPlanPage from './pages/MealPlanPage'
 import MealPlanDetailPage from './pages/MealPlanDetailPage'
 import StatisticsPage from './pages/StatisticsPage'
 import IngredientsPage from './pages/IngredientsPage'
+import IngredientSearchPage from './pages/IngredientSearchPage'
 
 function ComingSoonPage() {
   return (
@@ -39,6 +40,7 @@ function AppLayout() {
           <Route path="/dishes" element={<DishesPage />} />
           <Route path="/ingredients" element={<IngredientsPage />} />
           <Route path="/random" element={<RandomPage />} />
+          <Route path="/ingredient-search" element={<IngredientSearchPage />}/>
           <Route path="/meal-plan" element={<MealPlanPage />} />
           <Route path="/meal-plan/:id" element={<MealPlanDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />

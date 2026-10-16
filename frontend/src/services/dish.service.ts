@@ -1,5 +1,6 @@
 import type {
   Dish,
+  DishByIngredientsResponse,
   DishFormData,
   DishListResponse,
 } from '../types/dish'
@@ -143,4 +144,31 @@ export async function getDishIngredients(
   }
 
   return result as DishIngredientListResponse
+}
+
+export async function getDishesByIngredients(
+  ingredientIds: string[],
+): Promise<DishByIngredientsResponse> {
+  const params = new URLSearchParams({
+    ids: ingredientIds.join(','),
+  })
+
+  const response = await fetch(
+    `${API_BASE_URL}/by-ingredients?${params.toString()}`,
+  )
+
+  const result = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ??
+        `Không thể tìm món theo nguyên liệu (${response.status}).`,
+    )
+  }
+
+  if (!result || !Array.isArray(result.data)) {
+    throw new Error('Dữ liệu trả về từ API tìm món không hợp lệ.')
+  }
+
+  return result as DishByIngredientsResponse
 }

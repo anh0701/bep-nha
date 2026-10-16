@@ -1,5 +1,5 @@
 
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 
 import {
     getAllDishes,
@@ -8,6 +8,7 @@ import {
     removeDish,
     randomize,
     getDishById,
+    searchDishesByIngredients,
 } from '../services/dish.service.js'
 
 function isDatabaseError(
@@ -285,5 +286,44 @@ export async function getDish(
   } catch (error) {
     console.error('Failed to get dish:', error)
     res.status(500).json({ message: 'Cannot retrieve dish' })
+  }
+}
+
+export async function getDishesByIngredients(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const rawIds = req.query.ids
+
+    if (typeof rawIds !== 'string' || rawIds.trim() === '') {
+      res.status(400).json({
+        message: 'Vui lòng chọn ít nhất một nguyên liệu.',
+      })
+      return
+    }
+
+    const ingredientIds = rawIds.split(',').map((id) => id.trim())
+
+    if (
+      ingredientIds.some(
+        (id) => !/^[1-9]\d*$/.test(id),
+      )
+    ) {
+      res.status(400).json({
+        message: 'Danh sách ID nguyên liệu không hợp lệ.',
+      })
+      return
+    }
+
+    const dishes = await searchDishesByIngredients(ingredientIds)
+
+    res.status(200).json({
+      data: dishes,
+      total: dishes.length,
+    })
+  } catch (error) {
+    next(error)
   }
 }
