@@ -16,7 +16,7 @@ import {
 } from '../services/dish-ingredient.service'
 import { getIngredients } from '../services/ingredient.service'
 
-import type { Dish, DishFormData } from '../types/dish'
+import type { Dish, DishFormData, MealRole } from '../types/dish'
 import type { Category } from '../types/category'
 import type { Ingredient } from '../types/ingredient'
 import type {
@@ -41,6 +41,10 @@ interface IngredientRow {
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string
+}
+
+type DishFormState = Omit<DishFormData, 'meal_role'> & {
+  meal_role: MealRole | ''
 }
 
 function toIngredientRow(item: DishIngredient): IngredientRow {
@@ -91,9 +95,10 @@ export default function DishFormModal({
   onClose,
   onSuccess,
 }: DishFormModalProps) {
-  const [formData, setFormData] = useState<DishFormData>(() => ({
+  const [formData, setFormData] = useState<DishFormState>(() => ({
     name: dish?.name ?? '',
     category_id: dish?.category_id ?? categories[0]?.id ?? '',
+    meal_role: dish?.meal_role ?? '',
   }))
 
   // Giữ lại món đã lưu nếu bước lưu nguyên liệu gặp lỗi.
@@ -341,6 +346,11 @@ export default function DishFormModal({
       return
     }
 
+    if (!formData.meal_role) {
+      setFormError('Vui lòng chọn vai trò trong bữa ăn.')
+      return
+    }
+
     if (isLoadingIngredients || ingredientLoadError) {
       setFormError(
         'Chưa tải được dữ liệu nguyên liệu. Vui lòng tải lại trước khi lưu.',
@@ -355,6 +365,7 @@ export default function DishFormModal({
     const payload: DishFormData = {
       name,
       category_id: formData.category_id,
+      meal_role: formData.meal_role,
     }
 
     try {
@@ -495,6 +506,42 @@ export default function DishFormModal({
                   required
                   disabled={isSubmitting}
                 />
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="dish-meal-role"
+                    className="block text-sm font-medium text-ink"
+                  >
+                    Vai trò trong bữa ăn
+                  </label>
+
+                  <select
+                    id="dish-meal-role"
+                    value={formData.meal_role}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        meal_role: event.target.value as MealRole | '',
+                      }))
+                    }
+                    required
+                    disabled={isSubmitting}
+                    className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none focus:border-forest disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      Chọn vai trò trong bữa ăn
+                    </option>
+                    <option value="main">Món chính</option>
+                    <option value="vegetable">Món rau</option>
+                    <option value="soup">Món canh</option>
+                    <option value="one_dish">Món ăn một mình</option>
+                    <option value="side">Món ăn kèm</option>
+                  </select>
+
+                  <p className="text-xs leading-5 text-muted">
+                    Vai trò này được dùng để chọn món phù hợp khi tạo thực đơn ngẫu nhiên.
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -597,11 +644,10 @@ export default function DishFormModal({
                             ingredientRowRefs.current.delete(index)
                           }
                         }}
-                        className={`overflow-hidden rounded-xl border bg-white transition-colors ${
-                          isExpanded
+                        className={`overflow-hidden rounded-xl border bg-white transition-colors ${isExpanded
                             ? 'border-forest/40 shadow-sm'
                             : 'border-beige hover:border-forest/25'
-                        }`}
+                          }`}
                       >
                         {/* Header thu gọn của nguyên liệu */}
                         <div className="flex items-center gap-2 p-3 sm:gap-3 sm:p-4">
@@ -639,9 +685,8 @@ export default function DishFormModal({
 
                             <ChevronDown
                               size={18}
-                              className={`shrink-0 text-muted transition-transform duration-200 ${
-                                isExpanded ? 'rotate-180' : ''
-                              }`}
+                              className={`shrink-0 text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''
+                                }`}
                             />
                           </button>
 
@@ -649,10 +694,9 @@ export default function DishFormModal({
                             type="button"
                             onClick={() => removeIngredientRow(index)}
                             disabled={isSubmitting}
-                            aria-label={`Xóa ${
-                              selectedIngredient?.name ??
+                            aria-label={`Xóa ${selectedIngredient?.name ??
                               `nguyên liệu ${index + 1}`
-                            }`}
+                              }`}
                             title="Xóa nguyên liệu"
                             className="shrink-0 rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                           >

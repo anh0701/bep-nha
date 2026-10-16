@@ -1,3 +1,9 @@
+export type MealRole =
+  | 'main'
+  | 'vegetable'
+  | 'soup'
+  | 'one_dish'
+  | 'side'
 
 export interface Dish {
   id: string
@@ -5,6 +11,7 @@ export interface Dish {
   category_id: string
   category: string
   is_active: boolean
+  meal_role: MealRole | null
 }
 
 export interface DishListResponse {
@@ -15,6 +22,7 @@ export interface DishListResponse {
 export interface DishFormData {
   name: string
   category_id: string
+  meal_role: MealRole
 }
 
 export interface DishByIngredients {

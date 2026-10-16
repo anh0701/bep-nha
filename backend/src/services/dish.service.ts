@@ -8,7 +8,7 @@ import {
   findDishesByIngredients,
 } from '../repositories/dish.repository.js'
 
-import type { IngredientMatchDish, RandomDishCandidate } from '../repositories/dish.repository.js'
+import type { IngredientMatchDish, MealRole, RandomDishCandidate } from '../repositories/dish.repository.js'
 
 import { saveMenu } from '../repositories/menu.repository.js'
 
@@ -16,16 +16,21 @@ export async function getAllDishes() {
   return findAllDishes()
 }
 
-export async function addDish(name: string, categoryId: string) {
-  return insertDish(name, categoryId)
+export async function addDish(
+  name: string,
+  categoryId: string,
+  mealRole: MealRole,
+) {
+  return insertDish(name, categoryId, mealRole)
 }
 
 export async function modifyDish(
   id: string,
   name: string,
   categoryId: string,
+  mealRole: MealRole,
 ) {
-  return editDish(id, name, categoryId)
+  return editDish(id, name, categoryId, mealRole)
 }
 
 export async function removeDish(id: string) {

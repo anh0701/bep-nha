@@ -1,12 +1,20 @@
 
 import { pool } from '../db/pool.js'
 
+export type MealRole =
+  | 'main'
+  | 'vegetable'
+  | 'soup'
+  | 'one_dish'
+  | 'side'
+
 export interface Dish {
   id: string
   name: string
   category_id: string
   category: string
   is_active: boolean
+  meal_role: MealRole | null
 }
 
 export async function findAllDishes(): Promise<Dish[]> {
@@ -16,6 +24,7 @@ export async function findAllDishes(): Promise<Dish[]> {
       d.name,
       d.category_id,
       c.name AS category,
+      d.meal_role,
       d.is_active
     FROM dishes d
     INNER JOIN categories c ON c.id = d.category_id
@@ -29,22 +38,24 @@ export async function findAllDishes(): Promise<Dish[]> {
 export async function createDish(
   name: string,
   categoryId: string,
+  mealRole: MealRole,
 ): Promise<Dish> {
   const result = await pool.query<Dish>(
     `WITH inserted AS (
-       INSERT INTO dishes (name, category_id)
-       VALUES ($1, $2)
-       RETURNING id, name, category_id, is_active
+       INSERT INTO dishes (name, category_id, meal_role)
+       VALUES ($1, $2, $3)
+       RETURNING id, name, category_id, is_active, meal_role
      )
      SELECT
        i.id,
        i.name,
        i.category_id,
        c.name AS category,
-       i.is_active
+       i.is_active,
+       i.meal_role
      FROM inserted i
      INNER JOIN categories c ON c.id = i.category_id`,
-    [name, categoryId],
+    [name, categoryId, mealRole],
   )
 
   return result.rows[0]
@@ -54,23 +65,27 @@ export async function updateDish(
   id: string,
   name: string,
   categoryId: string,
+  mealRole: MealRole,
 ): Promise<Dish | null> {
   const result = await pool.query<Dish>(
     `WITH updated AS (
        UPDATE dishes
-       SET name = $2, category_id = $3
+       SET name = $2,
+           category_id = $3,
+           meal_role = $4
        WHERE id = $1 AND is_active = TRUE
-       RETURNING id, name, category_id, is_active
+       RETURNING id, name, category_id, is_active, meal_role
      )
      SELECT
        u.id,
        u.name,
        u.category_id,
        c.name AS category,
-       u.is_active
+       u.is_active,
+       u.meal_role
      FROM updated u
      INNER JOIN categories c ON c.id = u.category_id`,
-    [id, name, categoryId],
+    [id, name, categoryId, mealRole],
   )
 
   return result.rows[0] ?? null
@@ -189,7 +204,8 @@ export async function findDishById(id: string): Promise<Dish | null> {
       d.name,
       d.category_id,
       c.name AS category,
-      d.is_active
+      d.is_active,
+      d.meal_role
     FROM dishes d
     INNER JOIN categories c ON c.id = d.category_id
     WHERE d.id = $1

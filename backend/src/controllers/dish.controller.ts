@@ -10,6 +10,7 @@ import {
     getDishById,
     searchDishesByIngredients,
 } from '../services/dish.service.js'
+import { MealRole } from '../repositories/dish.repository.js'
 
 function isDatabaseError(
     error: unknown,
@@ -52,15 +53,23 @@ export async function createDish(
             ? String(req.body.category_id)
             : ''
 
-    if (!name || name.length > 200 || !isValidId(categoryId)) {
+    const mealRole = req.body?.meal_role
+    if (
+        !name ||
+        name.length > 200 ||
+        !isValidId(categoryId) ||
+        !isMealRole(mealRole)
+    ) {
         res.status(400).json({
-            message: 'A valid name and category_id are required',
+            message:
+                'A valid name, category_id and meal_role are required',
         })
         return
     }
 
+
     try {
-        const dish = await addDish(name, categoryId)
+        const dish = await addDish(name, categoryId, mealRole)
         res.status(201).json({ data: dish })
     } catch (error) {
         if (isDatabaseError(error, '23505')) {
@@ -96,16 +105,23 @@ export async function updateDish(
             ? String(req.body.category_id)
             : ''
 
-    if (!isValidId(id) || !name || name.length > 200 ||
-        !isValidId(categoryId)) {
+    const mealRole = req.body?.meal_role
+    if (
+        !isValidId(id) ||
+        !name ||
+        name.length > 200 ||
+        !isValidId(categoryId) ||
+        !isMealRole(mealRole)
+    ) {
         res.status(400).json({
-            message: 'A valid id, name and category_id are required',
+            message:
+                'A valid id, name, category_id and meal_role are required',
         })
         return
     }
 
     try {
-        const dish = await modifyDish(id, name, categoryId)
+        const dish = await modifyDish(id, name, categoryId, mealRole)
 
         if (!dish) {
             res.status(404).json({ message: 'Dish not found' })
@@ -179,7 +195,7 @@ export async function randomDishes(
 
     const categoryId =
         typeof body.category_id === 'string' ||
-        typeof body.category_id === 'number'
+            typeof body.category_id === 'number'
             ? String(body.category_id)
             : undefined
 
@@ -264,66 +280,81 @@ export async function randomDishes(
 }
 
 export async function getDish(
-  req: Request,
-  res: Response,
+    req: Request,
+    res: Response,
 ): Promise<void> {
-  const { id } = req.params
+    const { id } = req.params
 
-  if (typeof id !== 'string' || !isValidId(id)) {
-    res.status(400).json({ message: 'Invalid dish id' })
-    return
-  }
-
-  try {
-    const dish = await getDishById(id)
-
-    if (!dish) {
-      res.status(404).json({ message: 'Dish not found' })
-      return
+    if (typeof id !== 'string' || !isValidId(id)) {
+        res.status(400).json({ message: 'Invalid dish id' })
+        return
     }
 
-    res.status(200).json({ data: dish })
-  } catch (error) {
-    console.error('Failed to get dish:', error)
-    res.status(500).json({ message: 'Cannot retrieve dish' })
-  }
+    try {
+        const dish = await getDishById(id)
+
+        if (!dish) {
+            res.status(404).json({ message: 'Dish not found' })
+            return
+        }
+
+        res.status(200).json({ data: dish })
+    } catch (error) {
+        console.error('Failed to get dish:', error)
+        res.status(500).json({ message: 'Cannot retrieve dish' })
+    }
 }
 
 export async function getDishesByIngredients(
-  req: Request,
-  res: Response,
-  next: NextFunction,
+    req: Request,
+    res: Response,
+    next: NextFunction,
 ): Promise<void> {
-  try {
-    const rawIds = req.query.ids
+    try {
+        const rawIds = req.query.ids
 
-    if (typeof rawIds !== 'string' || rawIds.trim() === '') {
-      res.status(400).json({
-        message: 'Vui lòng chọn ít nhất một nguyên liệu.',
-      })
-      return
+        if (typeof rawIds !== 'string' || rawIds.trim() === '') {
+            res.status(400).json({
+                message: 'Vui lòng chọn ít nhất một nguyên liệu.',
+            })
+            return
+        }
+
+        const ingredientIds = rawIds.split(',').map((id) => id.trim())
+
+        if (
+            ingredientIds.some(
+                (id) => !/^[1-9]\d*$/.test(id),
+            )
+        ) {
+            res.status(400).json({
+                message: 'Danh sách ID nguyên liệu không hợp lệ.',
+            })
+            return
+        }
+
+        const dishes = await searchDishesByIngredients(ingredientIds)
+
+        res.status(200).json({
+            data: dishes,
+            total: dishes.length,
+        })
+    } catch (error) {
+        next(error)
     }
+}
 
-    const ingredientIds = rawIds.split(',').map((id) => id.trim())
+const MEAL_ROLES = [
+    'main',
+    'vegetable',
+    'soup',
+    'one_dish',
+    'side',
+] as const
 
-    if (
-      ingredientIds.some(
-        (id) => !/^[1-9]\d*$/.test(id),
-      )
-    ) {
-      res.status(400).json({
-        message: 'Danh sách ID nguyên liệu không hợp lệ.',
-      })
-      return
-    }
-
-    const dishes = await searchDishesByIngredients(ingredientIds)
-
-    res.status(200).json({
-      data: dishes,
-      total: dishes.length,
-    })
-  } catch (error) {
-    next(error)
-  }
+function isMealRole(value: unknown): value is MealRole {
+    return (
+        typeof value === 'string' &&
+        MEAL_ROLES.some((role) => role === value)
+    )
 }
