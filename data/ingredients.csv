@@ -1,0 +1,208 @@
+name,default_unit,ingredient_category
+Thịt heo,g,Thịt
+Thịt ba chỉ,g,Thịt
+Thịt nạc vai,g,Thịt
+Thịt nạc thăn,g,Thịt
+Thịt heo xay,g,Thịt
+Sườn heo,g,Thịt
+Xương ống heo,g,Thịt
+Xương sườn heo,g,Thịt
+Giò heo,g,Thịt
+Tai heo,g,Thịt
+Gan heo,g,Thịt
+Tim heo,g,Thịt
+Thịt bò,g,Thịt
+Bắp bò,g,Thịt
+Thịt bò xay,g,Thịt
+Gân bò,g,Thịt
+Thịt gà,g,Thịt
+Ức gà,g,Thịt
+Đùi gà,g,Thịt
+Cánh gà,g,Thịt
+Chân gà,g,Thịt
+Thịt vịt,g,Thịt
+Thịt ngan,g,Thịt
+Thịt dê,g,Thịt
+Xúc xích,g,Thịt
+Lạp xưởng,g,Thịt
+Giò lụa,g,Thịt
+Chả quế,g,Thịt
+Cá rô phi,g,Hải sản
+Cá basa,g,Hải sản
+Cá thu,g,Hải sản
+Cá hồi,g,Hải sản
+Cá chép,g,Hải sản
+Cá trắm,g,Hải sản
+Cá diêu hồng,g,Hải sản
+Cá nục,g,Hải sản
+Cá lóc,g,Hải sản
+Cá ngừ,g,Hải sản
+Cá cơm,g,Hải sản
+Cá trích,g,Hải sản
+Cá bống,g,Hải sản
+Cá thác lác,g,Hải sản
+Tôm,g,Hải sản
+Tôm sú,g,Hải sản
+Tôm thẻ,g,Hải sản
+Tôm khô,g,Hải sản
+Tép,g,Hải sản
+Mực,g,Hải sản
+Bạch tuộc,g,Hải sản
+Cua,g,Hải sản
+Ghẹ,g,Hải sản
+Ngao,g,Hải sản
+Sò,g,Hải sản
+Hến,g,Hải sản
+Hàu,g,Hải sản
+Ốc,g,Hải sản
+Rong biển tươi,g,Hải sản
+Chả cá,g,Hải sản
+Rau muống,g,Rau củ
+Cải ngọt,g,Rau củ
+Cải thìa,g,Rau củ
+Cải bẹ xanh,g,Rau củ
+Cải thảo,g,Rau củ
+Bắp cải,g,Rau củ
+Rau ngót,g,Rau củ
+Mồng tơi,g,Rau củ
+Rau dền,g,Rau củ
+Rau lang,g,Rau củ
+Rau cần,g,Rau củ
+Xà lách,g,Rau củ
+Rau mùi,g,Rau củ
+Hành lá,g,Rau củ
+Thì là,g,Rau củ
+Tía tô,g,Rau củ
+Rau răm,g,Rau củ
+Húng quế,g,Rau củ
+Lá lốt,g,Rau củ
+Ngò gai,g,Rau củ
+Cà rốt,g,Rau củ
+Khoai tây,g,Rau củ
+Khoai lang,g,Rau củ
+Khoai môn,g,Rau củ
+Khoai sọ,g,Rau củ
+Củ cải trắng,g,Rau củ
+Củ dền,g,Rau củ
+Su hào,g,Rau củ
+Su su,g,Rau củ
+Bí đỏ,g,Rau củ
+Bí xanh,g,Rau củ
+Bí đao,g,Rau củ
+Mướp,g,Rau củ
+Bầu,g,Rau củ
+Cà tím,g,Rau củ
+Cà chua,g,Rau củ
+Dưa chuột,g,Rau củ
+Đậu bắp,g,Rau củ
+Mướp đắng,g,Rau củ
+Bông cải xanh,g,Rau củ
+Súp lơ trắng,g,Rau củ
+Ngô ngọt,g,Rau củ
+Măng tươi,g,Rau củ
+Giá đỗ,g,Rau củ
+Hành tây,g,Rau củ
+Hành tím,g,Rau củ
+Tỏi,g,Rau củ
+Gừng,g,Rau củ
+Nghệ tươi,g,Rau củ
+Riềng,g,Rau củ
+Sả,g,Rau củ
+Ớt tươi,g,Rau củ
+Ớt chuông,g,Rau củ
+Củ sen,g,Rau củ
+Ngó sen,g,Rau củ
+Thơm,g,Rau củ
+Chanh,quả,Rau củ
+Nấm rơm,g,Nấm
+Nấm hương tươi,g,Nấm
+Nấm hương khô,g,Nấm
+Nấm kim châm,g,Nấm
+Nấm đùi gà,g,Nấm
+Nấm mỡ,g,Nấm
+Mộc nhĩ,g,Nấm
+Nấm bào ngư,g,Nấm
+Nấm đông cô,g,Nấm
+Nấm tuyết,g,Nấm
+Trứng gà,quả,Trứng
+Trứng vịt,quả,Trứng
+Trứng cút,quả,Trứng
+Đậu phụ,g,Đậu và chế phẩm từ đậu
+Đậu phụ non,g,Đậu và chế phẩm từ đậu
+Đậu xanh,g,Đậu và chế phẩm từ đậu
+Đậu đỏ,g,Đậu và chế phẩm từ đậu
+Đậu đen,g,Đậu và chế phẩm từ đậu
+Đậu Hà Lan,g,Đậu và chế phẩm từ đậu
+Đậu que,g,Đậu và chế phẩm từ đậu
+Đậu cô ve,g,Đậu và chế phẩm từ đậu
+Đậu phộng,g,Đậu và chế phẩm từ đậu
+Váng đậu,g,Đậu và chế phẩm từ đậu
+Muối,g,Gia vị
+Đường,g,Gia vị
+Nước mắm,ml,Gia vị
+Nước tương,ml,Gia vị
+Dầu hào,ml,Gia vị
+Dầu mè,ml,Gia vị
+Giấm gạo,ml,Gia vị
+Hạt nêm,g,Gia vị
+Bột ngọt,g,Gia vị
+Tiêu đen,g,Gia vị
+Tiêu trắng,g,Gia vị
+Ớt bột,g,Gia vị
+Bột nghệ,g,Gia vị
+Ngũ vị hương,g,Gia vị
+Bột cà ri,g,Gia vị
+Mắm tôm,g,Gia vị
+Mắm ruốc,g,Gia vị
+Tương ớt,g,Gia vị
+Tương cà,g,Gia vị
+Sa tế,g,Gia vị
+Chao,g,Gia vị
+Mẻ,g,Gia vị
+Me chua,g,Gia vị
+Bột canh,g,Gia vị
+Mật ong,g,Gia vị
+Nước cốt chanh,ml,Gia vị
+Bột chiên giòn,g,Gia vị
+Bột năng,g,Gia vị
+Bột bắp,g,Gia vị
+Bột mì,g,Gia vị
+Bột gạo,g,Gia vị
+Bột chiên xù,g,Gia vị
+Dầu ăn,ml,Dầu và chất béo
+Dầu ô liu,ml,Dầu và chất béo
+Mỡ heo,g,Dầu và chất béo
+Bơ thực vật,g,Dầu và chất béo
+Gạo tẻ,g,Đồ khô
+Gạo nếp,g,Đồ khô
+Bún khô,g,Đồ khô
+Miến dong,g,Đồ khô
+Mì trứng,g,Đồ khô
+Mì gói,gói,Đồ khô
+Bánh đa,g,Đồ khô
+Bánh phở khô,g,Đồ khô
+Bánh canh khô,g,Đồ khô
+Bánh tráng,g,Đồ khô
+Mộc nhĩ khô,g,Đồ khô
+Nấm hương khô,g,Đồ khô
+Tôm khô,g,Đồ khô
+Cá khô,g,Đồ khô
+Măng khô,g,Đồ khô
+Rong biển khô,g,Đồ khô
+Vừng trắng,g,Đồ khô
+Vừng đen,g,Đồ khô
+Lạc rang,g,Đồ khô
+Hành phi,g,Đồ khô
+Tỏi phi,g,Đồ khô
+Bột chiên xù,g,Đồ khô
+Sữa tươi,ml,Sữa và chế phẩm từ sữa
+Sữa đặc,g,Sữa và chế phẩm từ sữa
+Bơ lạt,g,Sữa và chế phẩm từ sữa
+Phô mai,g,Sữa và chế phẩm từ sữa
+Kem tươi,ml,Sữa và chế phẩm từ sữa
+Sữa chua,g,Sữa và chế phẩm từ sữa
+Nước cốt dừa,ml,Khác
+Dừa nạo,g,Khác
+Đậu bắp,g,Khác
+Bánh mì,ổ,Khác
+Yến mạch,g,Khác
