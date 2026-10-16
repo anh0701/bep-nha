@@ -17,7 +17,7 @@ function normalizeInput(
   return {
     name: input.name.trim(),
     ingredient_category_id: input.ingredient_category_id.trim(),
-    default_unit: input.default_unit.trim(),
+    default_unit_id: input.default_unit_id.trim(),
     ...(typeof input.is_allergen === 'boolean'
       ? { is_allergen: input.is_allergen }
       : {}),
@@ -40,13 +40,12 @@ function validateInput(input: IngredientInput): void {
     throw new Error('Danh mục nguyên liệu không hợp lệ.')
   }
 
-  if (!input.default_unit) {
-    throw new Error('Đơn vị mặc định không được để trống.')
-  }
-
-  if (input.default_unit.length > 30) {
-    throw new Error('Đơn vị mặc định không được vượt quá 30 ký tự.')
-  }
+  if (
+  !/^\d+$/.test(input.default_unit_id) ||
+  BigInt(input.default_unit_id) <= 0n
+) {
+  throw new Error('Đơn vị mặc định không hợp lệ.')
+}
 }
 
 export async function getAllIngredients(search?: string) {

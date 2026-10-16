@@ -57,24 +57,16 @@ CREATE TABLE public.ingredient_categories (
 );
 
 
--- public.ingredients definition
+-- public.ingredients_import definition
 
 -- Drop table
 
--- DROP TABLE public.ingredients;
+-- DROP TABLE public.ingredients_import;
 
-CREATE TABLE public.ingredients (
-	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
-	"name" varchar(100) NOT NULL,
-	default_unit varchar(20) DEFAULT 'g'::character varying NOT NULL,
-	is_active bool DEFAULT true NOT NULL,
-	created_at timestamptz DEFAULT now() NOT NULL,
-	updated_at timestamptz DEFAULT now() NOT NULL,
-	ingredient_category_id int8 NULL,
-	CONSTRAINT ingredients_default_unit_not_blank CHECK ((length(TRIM(BOTH FROM default_unit)) > 0)),
-	CONSTRAINT ingredients_name_not_blank CHECK ((length(TRIM(BOTH FROM name)) > 0)),
-	CONSTRAINT ingredients_name_unique UNIQUE (name),
-	CONSTRAINT ingredients_pkey PRIMARY KEY (id)
+CREATE TABLE public.ingredients_import (
+	"name" varchar(100) NULL,
+	default_unit varchar(20) NULL,
+	ingredient_category varchar(100) NULL
 );
 
 
@@ -98,17 +90,24 @@ CREATE TABLE public.menus (
 CREATE UNIQUE INDEX menus_random_signature_unique ON public.menus USING btree (dish_signature) WHERE ((source)::text = 'random'::text);
 
 
--- public.allergen_ingredients definition
+-- public.units definition
 
 -- Drop table
 
--- DROP TABLE public.allergen_ingredients;
+-- DROP TABLE public.units;
 
-CREATE TABLE public.allergen_ingredients (
-	ingredient_id int8 NOT NULL,
+CREATE TABLE public.units (
+	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
+	"name" varchar(50) NOT NULL,
+	symbol varchar(20) NOT NULL,
+	unit_type varchar(20) NOT NULL,
 	created_at timestamptz DEFAULT now() NOT NULL,
-	CONSTRAINT allergen_ingredients_pkey PRIMARY KEY (ingredient_id),
-	CONSTRAINT allergen_ingredients_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE CASCADE
+	CONSTRAINT units_name_not_blank CHECK ((length(TRIM(BOTH FROM name)) > 0)),
+	CONSTRAINT units_name_unique UNIQUE (name),
+	CONSTRAINT units_pkey PRIMARY KEY (id),
+	CONSTRAINT units_symbol_not_blank CHECK ((length(TRIM(BOTH FROM symbol)) > 0)),
+	CONSTRAINT units_symbol_unique UNIQUE (symbol),
+	CONSTRAINT units_type_check CHECK (((unit_type)::text = ANY ((ARRAY['mass'::character varying, 'volume'::character varying, 'count'::character varying, 'package'::character varying])::text[])))
 );
 
 
@@ -132,6 +131,29 @@ CREATE TABLE public.dishes (
 );
 
 
+-- public.ingredients definition
+
+-- Drop table
+
+-- DROP TABLE public.ingredients;
+
+CREATE TABLE public.ingredients (
+	id int8 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START 1 CACHE 1 NO CYCLE) NOT NULL,
+	"name" varchar(100) NOT NULL,
+	default_unit varchar(20) DEFAULT 'g'::character varying NOT NULL,
+	is_active bool DEFAULT true NOT NULL,
+	created_at timestamptz DEFAULT now() NOT NULL,
+	updated_at timestamptz DEFAULT now() NOT NULL,
+	ingredient_category_id int8 NULL,
+	default_unit_id int8 NULL,
+	CONSTRAINT ingredients_default_unit_not_blank CHECK ((length(TRIM(BOTH FROM default_unit)) > 0)),
+	CONSTRAINT ingredients_name_not_blank CHECK ((length(TRIM(BOTH FROM name)) > 0)),
+	CONSTRAINT ingredients_name_unique UNIQUE (name),
+	CONSTRAINT ingredients_pkey PRIMARY KEY (id),
+	CONSTRAINT ingredients_default_unit_id_fkey FOREIGN KEY (default_unit_id) REFERENCES public.units(id) ON DELETE RESTRICT
+);
+
+
 -- public.menu_dishes definition
 
 -- Drop table
@@ -149,6 +171,20 @@ CREATE TABLE public.menu_dishes (
 	CONSTRAINT menu_dishes_menu_id_fkey FOREIGN KEY (menu_id) REFERENCES public.menus(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_menu_dishes_dish_id ON public.menu_dishes USING btree (dish_id);
+
+
+-- public.allergen_ingredients definition
+
+-- Drop table
+
+-- DROP TABLE public.allergen_ingredients;
+
+CREATE TABLE public.allergen_ingredients (
+	ingredient_id int8 NOT NULL,
+	created_at timestamptz DEFAULT now() NOT NULL,
+	CONSTRAINT allergen_ingredients_pkey PRIMARY KEY (ingredient_id),
+	CONSTRAINT allergen_ingredients_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE CASCADE
+);
 
 
 -- public.cooking_records definition
@@ -198,17 +234,19 @@ CREATE TABLE public.dish_ingredients (
 	dish_id int8 NOT NULL,
 	ingredient_id int8 NOT NULL,
 	quantity_per_person numeric(10, 3) NOT NULL,
-	unit varchar(20) NOT NULL,
+	unit varchar(20) NULL,
 	ingredient_role varchar(10) DEFAULT 'minor'::character varying NOT NULL,
 	is_optional bool DEFAULT false NOT NULL,
 	preparation_note text NULL,
 	created_at timestamptz DEFAULT now() NOT NULL,
 	updated_at timestamptz DEFAULT now() NOT NULL,
+	unit_id int8 NULL,
 	CONSTRAINT dish_ingredients_pkey PRIMARY KEY (dish_id, ingredient_id),
 	CONSTRAINT dish_ingredients_quantity_positive CHECK ((quantity_per_person > (0)::numeric)),
 	CONSTRAINT dish_ingredients_role_check CHECK (((ingredient_role)::text = ANY ((ARRAY['main'::character varying, 'minor'::character varying])::text[]))),
 	CONSTRAINT dish_ingredients_unit_not_blank CHECK ((length(TRIM(BOTH FROM unit)) > 0)),
 	CONSTRAINT dish_ingredients_dish_id_fkey FOREIGN KEY (dish_id) REFERENCES public.dishes(id) ON DELETE CASCADE,
-	CONSTRAINT dish_ingredients_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT
+	CONSTRAINT dish_ingredients_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT,
+	CONSTRAINT dish_ingredients_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES public.units(id) ON DELETE RESTRICT
 );
 CREATE INDEX idx_dish_ingredients_ingredient_id ON public.dish_ingredients USING btree (ingredient_id);

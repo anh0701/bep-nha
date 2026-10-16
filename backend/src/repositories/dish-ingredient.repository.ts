@@ -8,7 +8,9 @@ export interface DishIngredient {
   ingredient_category_id: string
   ingredient_category_name: string
   quantity_per_person: number
+  unit_id: string
   unit: string
+  unit_name: string
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string | null
@@ -18,7 +20,7 @@ export interface DishIngredient {
 export interface DishIngredientInput {
   ingredient_id: string
   quantity_per_person: number
-  unit: string
+  unit_id: string
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string | null
@@ -49,7 +51,9 @@ export async function findDishIngredients(
       i.ingredient_category_id::text AS ingredient_category_id,
       ic.name AS ingredient_category_name,
       di.quantity_per_person,
-      di.unit,
+      u.id::text AS unit_id,
+      u.symbol AS unit,
+      u.name AS unit_name,
       di.ingredient_role,
       di.is_optional,
       di.preparation_note,
@@ -63,6 +67,8 @@ export async function findDishIngredients(
       ON i.id = di.ingredient_id
     INNER JOIN ingredient_categories ic
       ON ic.id = i.ingredient_category_id
+    INNER JOIN units u
+      ON u.id = di.unit_id
     WHERE di.dish_id = $1::bigint
     ORDER BY
       CASE di.ingredient_role
@@ -110,6 +116,8 @@ export async function replaceDishIngredients(
         (item) => item.ingredient_id,
       )
 
+      const uniqueIngredientIds = [...new Set(ingredientIds)]
+
       const activeIngredients = await client.query<{ id: string }>(
         `
         SELECT id::text AS id
@@ -117,13 +125,29 @@ export async function replaceDishIngredients(
         WHERE id = ANY($1::bigint[])
           AND is_active = TRUE
         `,
-        [ingredientIds],
+        [uniqueIngredientIds],
       )
 
-      if (activeIngredients.rows.length !== ingredientIds.length) {
+      if (activeIngredients.rows.length !== uniqueIngredientIds.length) {
         throw new Error(
           'Một hoặc nhiều nguyên liệu không tồn tại hoặc đã ngừng hoạt động.',
         )
+      }
+
+      const unitIds = ingredients.map((item) => item.unit_id)
+      const uniqueUnitIds = [...new Set(unitIds)]
+
+      const existingUnits = await client.query<{ id: string }>(
+        `
+        SELECT id::text AS id
+        FROM units
+        WHERE id = ANY($1::bigint[])
+        `,
+        [uniqueUnitIds],
+      )
+
+      if (existingUnits.rows.length !== uniqueUnitIds.length) {
+        throw new Error('Một hoặc nhiều đơn vị không tồn tại.')
       }
     }
 
@@ -143,7 +167,7 @@ export async function replaceDishIngredients(
           dish_id,
           ingredient_id,
           quantity_per_person,
-          unit,
+          unit_id,
           ingredient_role,
           is_optional,
           preparation_note
@@ -152,7 +176,7 @@ export async function replaceDishIngredients(
           $1::bigint,
           $2::bigint,
           $3,
-          $4,
+          $4::bigint,
           $5,
           $6,
           $7
@@ -162,7 +186,7 @@ export async function replaceDishIngredients(
           dishId,
           item.ingredient_id,
           item.quantity_per_person,
-          item.unit,
+          item.unit_id,
           item.ingredient_role,
           item.is_optional,
           item.preparation_note,
@@ -178,7 +202,9 @@ export async function replaceDishIngredients(
         i.ingredient_category_id::text AS ingredient_category_id,
         ic.name AS ingredient_category_name,
         di.quantity_per_person,
-        di.unit,
+        u.id::text AS unit_id,
+        u.symbol AS unit,
+        u.name AS unit_name,
         di.ingredient_role,
         di.is_optional,
         di.preparation_note,
@@ -192,6 +218,8 @@ export async function replaceDishIngredients(
         ON i.id = di.ingredient_id
       INNER JOIN ingredient_categories ic
         ON ic.id = i.ingredient_category_id
+      INNER JOIN units u
+        ON u.id = di.unit_id
       WHERE di.dish_id = $1::bigint
       ORDER BY
         CASE di.ingredient_role

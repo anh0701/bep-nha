@@ -405,4 +405,187 @@ HAVING COUNT(*) > 1;
 ALTER TABLE menus
 ADD CONSTRAINT menus_dish_signature_unique
 UNIQUE (dish_signature);
+
+--
+
+SELECT
+    'ingredients.default_unit' AS source,
+    TRIM(default_unit) AS unit_value,
+    COUNT(*) AS total
+FROM public.ingredients
+GROUP BY TRIM(default_unit)
+
+UNION ALL
+
+SELECT
+    'dish_ingredients.unit' AS source,
+    TRIM(unit) AS unit_value,
+    COUNT(*) AS total
+FROM public.dish_ingredients
+GROUP BY TRIM(unit)
+
+ORDER BY source, unit_value;
+
+--
+
+SELECT
+    unit,
+    COUNT(*) AS total
+FROM public.dish_ingredients
+GROUP BY unit
+ORDER BY unit;
+--
+SELECT COUNT(*) AS total_dish_ingredients
+FROM public.dish_ingredients;
+
+----------------------------------------------------------------------------------------------
+
+
+
+-- 1. Tạo danh mục đơn vị dùng chung
+CREATE TABLE IF NOT EXISTS public.units (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name varchar(50) NOT NULL,
+    symbol varchar(20) NOT NULL,
+    unit_type varchar(20) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT units_name_unique UNIQUE (name),
+    CONSTRAINT units_symbol_unique UNIQUE (symbol),
+    CONSTRAINT units_name_not_blank
+        CHECK (length(TRIM(name)) > 0),
+    CONSTRAINT units_symbol_not_blank
+        CHECK (length(TRIM(symbol)) > 0),
+    CONSTRAINT units_type_check
+        CHECK (unit_type IN ('mass', 'volume', 'count', 'package'))
+);
+
+-- 2. Khởi tạo các đơn vị đang dùng và một số đơn vị thông dụng
+INSERT INTO public.units (name, symbol, unit_type)
+VALUES
+    ('Gam', 'g', 'mass'),
+    ('Kilôgam', 'kg', 'mass'),
+    ('Mililít', 'ml', 'volume'),
+    ('Lít', 'l', 'volume'),
+    ('Quả', 'quả', 'count'),
+    ('Ổ', 'ổ', 'count'),
+    ('Gói', 'gói', 'package'),
+    ('Củ', 'củ', 'count'),
+    ('Bó', 'bó', 'count'),
+    ('Nhánh', 'nhánh', 'count'),
+    ('Lát', 'lát', 'count'),
+    ('Muỗng cà phê', 'muỗng cà phê', 'volume'),
+    ('Muỗng canh', 'muỗng canh', 'volume'),
+    ('Chén', 'chén', 'volume'),
+    ('Thìa', 'thìa', 'count'),
+    ('Con', 'con', 'count'),
+    ('Miếng', 'miếng', 'count'),
+    ('Tép', 'tép', 'count'),
+    ('Trái', 'trái', 'count'),
+    ('Cây', 'cây', 'count')
+ON CONFLICT (symbol) DO NOTHING;
+
+-- 3. Thêm cột ID mới, chưa bắt buộc NOT NULL
+-- để backend hiện tại tiếp tục hoạt động trong giai đoạn chuyển tiếp.
+ALTER TABLE public.ingredients
+    ADD COLUMN IF NOT EXISTS default_unit_id bigint;
+
+ALTER TABLE public.dish_ingredients
+    ADD COLUMN IF NOT EXISTS unit_id bigint;
+
+-- 4. Ánh xạ đơn vị hiện tại của 203 nguyên liệu sang units.id
+UPDATE public.ingredients AS i
+SET default_unit_id = u.id
+FROM public.units AS u
+WHERE TRIM(i.default_unit) = u.symbol
+  AND i.default_unit_id IS NULL;
+
+-- 5. Kiểm tra dữ liệu đã ánh xạ đầy đủ chưa.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM public.ingredients
+        WHERE default_unit_id IS NULL
+    ) THEN
+        RAISE EXCEPTION
+            'Có nguyên liệu chưa ánh xạ được đơn vị. Hãy kiểm tra trước khi tiếp tục.';
+    END IF;
+END $$;
+
+-- 6. Tạo khóa ngoại.
+-- Chỉ tạo nếu constraint chưa tồn tại.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'ingredients_default_unit_id_fkey'
+          AND conrelid = 'public.ingredients'::regclass
+    ) THEN
+        ALTER TABLE public.ingredients
+            ADD CONSTRAINT ingredients_default_unit_id_fkey
+            FOREIGN KEY (default_unit_id)
+            REFERENCES public.units(id)
+            ON DELETE RESTRICT;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'dish_ingredients_unit_id_fkey'
+          AND conrelid = 'public.dish_ingredients'::regclass
+    ) THEN
+        ALTER TABLE public.dish_ingredients
+            ADD CONSTRAINT dish_ingredients_unit_id_fkey
+            FOREIGN KEY (unit_id)
+            REFERENCES public.units(id)
+            ON DELETE RESTRICT;
+    END IF;
+END $$;
+
+-- check
+SELECT
+    i.id,
+    i.name AS ingredient_name,
+    i.default_unit AS old_unit,
+    u.id AS unit_id,
+    u.name AS unit_name,
+    u.symbol AS unit_symbol,
+    u.unit_type
+FROM public.ingredients i
+LEFT JOIN public.units u
+    ON u.id = i.default_unit_id
+ORDER BY i.id;
+
+--
+SELECT
+    COUNT(*) AS total_ingredients,
+    COUNT(default_unit_id) AS mapped_ingredients,
+    COUNT(*) FILTER (
+        WHERE default_unit_id IS NULL
+    ) AS unmapped_ingredients
+FROM public.ingredients;
+
+--
+ALTER TABLE public.dish_ingredients
+ALTER COLUMN unit DROP NOT NULL;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         

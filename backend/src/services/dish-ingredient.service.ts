@@ -1,3 +1,4 @@
+
 import {
   findDishIngredients,
   replaceDishIngredients,
@@ -27,7 +28,6 @@ export async function setIngredientsOfDish(
       throw new Error('ID nguyên liệu không hợp lệ.')
     }
 
-    // Chuẩn hóa để tránh trường hợp ID "01" và "1" được xem là khác nhau.
     const normalizedId = BigInt(item.ingredient_id).toString()
 
     if (seenIds.has(normalizedId)) {
@@ -44,11 +44,11 @@ export async function setIngredientsOfDish(
     }
 
     if (
-      typeof item.unit !== 'string' ||
-      !item.unit.trim() ||
-      item.unit.trim().length > 30
+      typeof item.unit_id !== 'string' ||
+      !/^\d+$/.test(item.unit_id) ||
+      BigInt(item.unit_id) <= 0n
     ) {
-      throw new Error('Đơn vị phải có từ 1 đến 30 ký tự.')
+      throw new Error('ID đơn vị không hợp lệ.')
     }
 
     if (
@@ -76,9 +76,8 @@ export async function setIngredientsOfDish(
       )
     }
 
-    // Chuẩn hóa dữ liệu trước khi lưu.
     item.ingredient_id = normalizedId
-    item.unit = item.unit.trim()
+    item.unit_id = BigInt(item.unit_id).toString()
     item.preparation_note =
       item.preparation_note?.trim() || null
   }

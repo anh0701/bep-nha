@@ -36,13 +36,12 @@ function parseIngredientInput(
         ) ||
         !/^\d+$/.test(String(input.ingredient_category_id)) ||
         BigInt(String(input.ingredient_category_id)) <= 0n ||
-        typeof input.default_unit !== 'string' ||
-        !input.default_unit.trim() ||
-        input.default_unit.trim().length > 30 ||
         (
-            input.is_allergen !== undefined &&
-            typeof input.is_allergen !== 'boolean'
-        )
+            typeof input.default_unit_id !== 'string' &&
+            typeof input.default_unit_id !== 'number'
+        ) ||
+        !/^\d+$/.test(String(input.default_unit_id)) ||
+        BigInt(String(input.default_unit_id)) <= 0n
     ) {
         return null
     }
@@ -50,7 +49,7 @@ function parseIngredientInput(
     return {
         name: input.name,
         ingredient_category_id: String(input.ingredient_category_id),
-        default_unit: input.default_unit,
+        default_unit_id: String(input.default_unit_id),
         ...(typeof input.is_allergen === 'boolean'
             ? { is_allergen: input.is_allergen }
             : {}),

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -15,17 +14,15 @@ import {
   setDishIngredients,
 } from '../services/dish-ingredient.service'
 import { getIngredients } from '../services/ingredient.service'
+import { getUnits } from '../services/unit.service'
 
 import type { Dish, DishFormData, MealRole } from '../types/dish'
 import type { Category } from '../types/category'
 import type { Ingredient } from '../types/ingredient'
-import type {
-  DishIngredient,
-  DishIngredientInput,
-} from '../services/dish-ingredient.service'
-import type { IngredientRole } from '../types/dish-ingredient'
+import type { DishIngredient, DishIngredientInput, IngredientRole } from '../types/dish-ingredient'
 
 import CategorySelect from './CategorySelect'
+import type { Unit } from '../types/unit'
 
 interface DishFormModalProps {
   categories: Category[]
@@ -37,7 +34,7 @@ interface DishFormModalProps {
 interface IngredientRow {
   ingredient_id: string
   quantity_per_person: string
-  unit: string
+  unit_id: string
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string
@@ -51,7 +48,7 @@ function toIngredientRow(item: DishIngredient): IngredientRow {
   return {
     ingredient_id: item.ingredient_id,
     quantity_per_person: String(item.quantity_per_person),
-    unit: item.unit,
+    unit_id: item.unit_id,
     ingredient_role: item.ingredient_role,
     is_optional: item.is_optional,
     preparation_note: item.preparation_note ?? '',
@@ -62,7 +59,7 @@ function createEmptyIngredientRow(): IngredientRow {
   return {
     ingredient_id: '',
     quantity_per_person: '',
-    unit: '',
+    unit_id: '',
     ingredient_role: 'main',
     is_optional: false,
     preparation_note: '',
@@ -105,6 +102,7 @@ export default function DishFormModal({
   const [savedDish, setSavedDish] = useState<Dish | null>(dish)
 
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [ingredientRows, setIngredientRows] = useState<IngredientRow[]>([])
   const [isLoadingIngredients, setIsLoadingIngredients] = useState(true)
   const [ingredientLoadError, setIngredientLoadError] = useState<string | null>(
@@ -134,18 +132,21 @@ export default function DishFormModal({
       setIngredientLoadError(null)
 
       try {
-        const [ingredientResult, dishIngredientResult] = await Promise.all([
-          getIngredients(),
-          dish
-            ? getDishIngredients(dish.id)
-            : Promise.resolve({ data: [], total: 0 }),
-        ])
+        const [ingredientResult, dishIngredientResult, unitResult] =
+          await Promise.all([
+            getIngredients(),
+            dish
+              ? getDishIngredients(dish.id)
+              : Promise.resolve({ data: [], total: 0 }),
+            getUnits(),
+          ])
 
         if (cancelled) return
 
         setIngredients(
           ingredientResult.data.filter((ingredient) => ingredient.is_active),
         )
+        setUnits(unitResult)
         setIngredientRows(dishIngredientResult.data.map(toIngredientRow))
         setExpandedIngredientIndex(null)
       } catch (error) {
@@ -153,7 +154,7 @@ export default function DishFormModal({
 
         console.error('Failed to load dish ingredients:', error)
         setIngredientLoadError(
-          'Không thể tải kho nguyên liệu hoặc nguyên liệu đã gán. Vui lòng thử lại.',
+          'Không thể tải kho nguyên liệu, danh sách đơn vị hoặc nguyên liệu đã gán. Vui lòng thử lại.',
         )
       } finally {
         if (!cancelled) {
@@ -212,9 +213,18 @@ export default function DishFormModal({
       (ingredient) => ingredient.id === ingredientId,
     )
 
+    const defaultUnitId =
+      (selectedIngredient as (Ingredient & {
+        default_unit_id?: string | null
+      }) | undefined)?.default_unit_id ?? ''
+
+    const hasDefaultUnit = units.some(
+      (unit) => unit.id === defaultUnitId,
+    )
+
     updateIngredientRow(index, {
       ingredient_id: ingredientId,
-      unit: selectedIngredient?.default_unit ?? '',
+      unit_id: hasDefaultUnit ? defaultUnitId : '',
     })
   }
 
@@ -281,7 +291,7 @@ export default function DishFormModal({
       seenIngredientIds.add(row.ingredient_id)
 
       const quantity = Number(row.quantity_per_person)
-      const unit = row.unit.trim()
+      const unitId = row.unit_id
       const note = row.preparation_note.trim()
 
       if (
@@ -296,11 +306,9 @@ export default function DishFormModal({
         return null
       }
 
-      if (!unit || unit.length > 30) {
+      if (!unitId || !units.some((unit) => unit.id === unitId)) {
         setExpandedIngredientIndex(index)
-        setFormError(
-          `Đơn vị ở dòng ${rowNumber} phải có từ 1 đến 30 ký tự.`,
-        )
+        setFormError(`Vui lòng chọn đơn vị hợp lệ ở dòng ${rowNumber}.`)
         return null
       }
 
@@ -315,7 +323,7 @@ export default function DishFormModal({
       result.push({
         ingredient_id: row.ingredient_id,
         quantity_per_person: quantity,
-        unit,
+        unit_id: unitId,
         ingredient_role: row.ingredient_role,
         is_optional: row.is_optional,
         preparation_note: note || null,
@@ -645,8 +653,8 @@ export default function DishFormModal({
                           }
                         }}
                         className={`overflow-hidden rounded-xl border bg-white transition-colors ${isExpanded
-                            ? 'border-forest/40 shadow-sm'
-                            : 'border-beige hover:border-forest/25'
+                          ? 'border-forest/40 shadow-sm'
+                          : 'border-beige hover:border-forest/25'
                           }`}
                       >
                         {/* Header thu gọn của nguyên liệu */}
@@ -669,8 +677,9 @@ export default function DishFormModal({
                               </span>
 
                               <span className="mt-1 block truncate text-xs text-muted">
-                                {row.quantity_per_person && row.unit
-                                  ? `${row.quantity_per_person} ${row.unit}/người`
+                                {row.quantity_per_person && row.unit_id
+                                  ? `${row.quantity_per_person} ${units.find((unit) => unit.id === row.unit_id)?.symbol ?? ''
+                                  }/người`
                                   : 'Chưa nhập định lượng'}
 
                                 {' · '}
@@ -754,7 +763,7 @@ export default function DishFormModal({
                               </select>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
                               <div className="space-y-2">
                                 <label
                                   htmlFor={`quantity-${index}`}
@@ -789,21 +798,26 @@ export default function DishFormModal({
                                   Đơn vị
                                 </label>
 
-                                <input
+                                <select
                                   id={`unit-${index}`}
-                                  type="text"
-                                  value={row.unit}
+                                  value={row.unit_id}
                                   onChange={(event) =>
                                     updateIngredientRow(index, {
-                                      unit: event.target.value,
+                                      unit_id: event.target.value,
                                     })
                                   }
-                                  placeholder="g, ml..."
-                                  maxLength={30}
                                   required
                                   disabled={isSubmitting}
                                   className="w-full rounded-xl border border-beige bg-white px-3 py-3 text-sm text-ink outline-none focus:border-forest disabled:opacity-60"
-                                />
+                                >
+                                  <option value="">Chọn đơn vị</option>
+
+                                  {units.map((unit) => (
+                                    <option key={unit.id} value={unit.id}>
+                                      {unit.name} ({unit.symbol})
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                             </div>
 

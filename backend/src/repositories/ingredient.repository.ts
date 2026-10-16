@@ -6,6 +6,7 @@ export interface Ingredient {
   name: string
   ingredient_category_id: string
   ingredient_category_name: string
+  default_unit_id: string
   default_unit: string
   is_active: boolean
   is_allergen: boolean
@@ -16,7 +17,7 @@ export interface Ingredient {
 export interface IngredientInput {
   name: string
   ingredient_category_id: string
-  default_unit: string
+  default_unit_id: string
   is_allergen?: boolean
 }
 
@@ -52,7 +53,8 @@ const ingredientSelect = `
     i.name,
     i.ingredient_category_id::text AS ingredient_category_id,
     ic.name AS ingredient_category_name,
-    i.default_unit,
+    i.default_unit_id::text AS default_unit_id,
+    u.symbol AS default_unit,
     i.is_active,
     EXISTS (
       SELECT 1
@@ -64,6 +66,8 @@ const ingredientSelect = `
   FROM ingredients i
   JOIN ingredient_categories ic
     ON ic.id = i.ingredient_category_id
+  JOIN public.units u
+    ON u.id = i.default_unit_id
 `
 
 export async function findAllIngredients(
@@ -132,21 +136,32 @@ export async function createIngredient(
     await client.query('BEGIN')
 
     const result = await client.query<{ id: string }>(
-      `
-      INSERT INTO ingredients (
-        name,
-        ingredient_category_id,
-        default_unit
-      )
-      VALUES ($1, $2::bigint, $3)
-      RETURNING id::text AS id
-      `,
-      [
-        input.name,
-        input.ingredient_category_id,
-        input.default_unit,
-      ],
-    )
+  `
+  INSERT INTO ingredients (
+    name,
+    ingredient_category_id,
+    default_unit,
+    default_unit_id
+  )
+  SELECT
+    $1,
+    $2::bigint,
+    u.symbol,
+    u.id
+  FROM public.units u
+  WHERE u.id = $3::bigint
+  RETURNING id::text AS id
+  `,
+  [
+    input.name,
+    input.ingredient_category_id,
+    input.default_unit_id,
+  ],
+)
+
+if (!result.rows[0]) {
+  throw new Error('Đơn vị mặc định không hợp lệ.')
+}
 
     const ingredientId = result.rows[0].id
 
@@ -183,23 +198,26 @@ export async function updateIngredient(
     await client.query('BEGIN')
 
     const result = await client.query<{ id: string }>(
-      `
-      UPDATE ingredients
-      SET
-        name = $2,
-        ingredient_category_id = $3::bigint,
-        default_unit = $4,
-        updated_at = NOW()
-      WHERE id = $1::bigint
-      RETURNING id::text AS id
-      `,
-      [
-        id,
-        input.name,
-        input.ingredient_category_id,
-        input.default_unit,
-      ],
-    )
+  `
+  UPDATE ingredients i
+  SET
+    name = $2,
+    ingredient_category_id = $3::bigint,
+    default_unit = u.symbol,
+    default_unit_id = u.id,
+    updated_at = NOW()
+  FROM public.units u
+  WHERE i.id = $1::bigint
+    AND u.id = $4::bigint
+  RETURNING i.id::text AS id
+  `,
+  [
+    id,
+    input.name,
+    input.ingredient_category_id,
+    input.default_unit_id,
+  ],
+)
 
     if (!result.rows[0]) {
       await client.query('ROLLBACK')

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { AlertTriangle, CircleAlert, LoaderCircle, X } from 'lucide-react'
 
 import type {
@@ -7,6 +7,9 @@ import type {
 } from '../types/ingredient'
 
 import type { IngredientCategory } from '../types/ingredient-category'
+import type { Unit } from '../types/unit'
+
+import { getUnits } from '../services/unit.service'
 import CategorySelect from './CategorySelect'
 
 interface IngredientFormModalProps {
@@ -23,25 +26,9 @@ interface IngredientFormModalProps {
 const EMPTY_FORM: IngredientFormData = {
     name: '',
     ingredient_category_id: '',
-    default_unit: 'g',
+    default_unit_id: '',
     is_allergen: false,
 }
-
-const UNIT_OPTIONS = [
-    'g',
-    'kg',
-    'ml',
-    'l',
-    'cái',
-    'củ',
-    'quả',
-    'muỗng',
-    'tép',
-    'nhánh',
-    'bó',
-    'lát',
-    'cây',
-]
 
 export default function IngredientFormModal({
     isOpen,
@@ -55,24 +42,68 @@ export default function IngredientFormModal({
 }: IngredientFormModalProps) {
     const [formData, setFormData] =
         useState<IngredientFormData>(EMPTY_FORM)
+
     const [formError, setFormError] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
 
+    const [units, setUnits] = useState<Unit[]>([])
+    const [unitsLoading, setUnitsLoading] = useState(false)
+    const [unitsError, setUnitsError] = useState<string | null>(null)
+
+    const loadUnits = useCallback(async () => {
+        setUnitsLoading(true)
+        setUnitsError(null)
+
+        try {
+            const data = await getUnits()
+            setUnits(data)
+        } catch (error) {
+            setUnitsError(
+                error instanceof Error
+                    ? error.message
+                    : 'Không thể tải danh sách đơn vị.',
+            )
+        } finally {
+            setUnitsLoading(false)
+        }
+    }, [])
+
     useEffect(() => {
         if (!isOpen) return
+
+        void loadUnits()
+    }, [isOpen, loadUnits])
+
+    useEffect(() => {
+        if (!isOpen) return
+
+        const defaultUnitId =
+            ingredient?.default_unit_id ??
+            units.find(
+                (unit) => unit.symbol === ingredient?.default_unit,
+            )?.id ??
+            units.find((unit) => unit.symbol === 'g')?.id ??
+            ''
 
         setFormData(
             ingredient
                 ? {
                     name: ingredient.name,
-                    ingredient_category_id: ingredient.ingredient_category_id,
-                    default_unit: ingredient.default_unit,
+                    ingredient_category_id:
+                        ingredient.ingredient_category_id,
+                    default_unit_id: defaultUnitId,
                     is_allergen: ingredient.is_allergen,
                 }
-                : { ...EMPTY_FORM },
+                : {
+                    ...EMPTY_FORM,
+                    default_unit_id:
+                        units.find((unit) => unit.symbol === 'g')?.id ??
+                        '',
+                },
         )
+
         setFormError(null)
-    }, [isOpen, ingredient])
+    }, [isOpen, ingredient, units])
 
     function updateForm<K extends keyof IngredientFormData>(
         field: K,
@@ -95,7 +126,7 @@ export default function IngredientFormModal({
 
         const name = formData.name.trim()
         const categoryId = formData.ingredient_category_id
-        const defaultUnit = formData.default_unit.trim()
+        const defaultUnitId = formData.default_unit_id
 
         if (!name) {
             setFormError('Vui lòng nhập tên nguyên liệu.')
@@ -112,15 +143,20 @@ export default function IngredientFormModal({
             return
         }
 
-        if (!defaultUnit) {
-            setFormError('Vui lòng nhập đơn vị mặc định.')
+        if (!defaultUnitId) {
+            setFormError('Vui lòng chọn đơn vị mặc định.')
+            return
+        }
+
+        if (!units.some((unit) => unit.id === defaultUnitId)) {
+            setFormError('Đơn vị mặc định không hợp lệ. Vui lòng chọn lại.')
             return
         }
 
         const payload: IngredientFormData = {
             name,
             ingredient_category_id: categoryId,
-            default_unit: defaultUnit,
+            default_unit_id: defaultUnitId,
             is_allergen: formData.is_allergen,
         }
 
@@ -128,11 +164,12 @@ export default function IngredientFormModal({
             setSaving(true)
             await onSubmit(payload)
             onClose()
-        } catch (err) {
-            console.error('Failed to save ingredient:', err)
+        } catch (error) {
+            console.error('Failed to save ingredient:', error)
+
             setFormError(
-                err instanceof Error
-                    ? err.message
+                error instanceof Error
+                    ? error.message
                     : 'Không thể lưu nguyên liệu. Vui lòng thử lại.',
             )
         } finally {
@@ -146,7 +183,9 @@ export default function IngredientFormModal({
         <div
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-0 sm:items-center sm:p-5"
             onMouseDown={(event) => {
-                if (event.target === event.currentTarget) handleClose()
+                if (event.target === event.currentTarget) {
+                    handleClose()
+                }
             }}
         >
             <section
@@ -186,7 +225,8 @@ export default function IngredientFormModal({
                             htmlFor="ingredient-name"
                             className="block text-sm font-medium text-ink"
                         >
-                            Tên nguyên liệu <span className="text-red-500">*</span>
+                            Tên nguyên liệu{' '}
+                            <span className="text-red-500">*</span>
                         </label>
 
                         <input
@@ -208,7 +248,8 @@ export default function IngredientFormModal({
                             htmlFor="ingredient-category"
                             className="block text-sm font-medium text-ink"
                         >
-                            Danh mục nguyên liệu <span className="text-red-500">*</span>
+                            Danh mục nguyên liệu{' '}
+                            <span className="text-red-500">*</span>
                         </label>
 
                         <CategorySelect
@@ -237,6 +278,7 @@ export default function IngredientFormModal({
                                 <p role="alert" className="text-xs text-red-600">
                                     {categoriesError}
                                 </p>
+
                                 <button
                                     type="button"
                                     onClick={onRetryCategories}
@@ -257,31 +299,62 @@ export default function IngredientFormModal({
                             htmlFor="ingredient-unit"
                             className="block text-sm font-medium text-ink"
                         >
-                            Đơn vị mặc định <span className="text-red-500">*</span>
+                            Đơn vị mặc định{' '}
+                            <span className="text-red-500">*</span>
                         </label>
 
-                        <input
+                        <select
                             id="ingredient-unit"
-                            list="ingredient-unit-options"
                             required
-                            maxLength={30}
-                            value={formData.default_unit}
+                            value={formData.default_unit_id}
                             onChange={(event) =>
-                                updateForm('default_unit', event.target.value)
+                                updateForm(
+                                    'default_unit_id',
+                                    event.target.value,
+                                )
                             }
-                            placeholder="Ví dụ: g"
-                            className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-forest"
-                        />
+                            disabled={
+                                unitsLoading ||
+                                !!unitsError ||
+                                units.length === 0
+                            }
+                            className="w-full rounded-xl border border-beige bg-white px-4 py-3 text-sm text-ink outline-none focus:border-forest disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <option value="">
+                                {unitsLoading
+                                    ? 'Đang tải đơn vị...'
+                                    : unitsError
+                                        ? 'Không thể tải đơn vị'
+                                        : 'Chọn đơn vị mặc định'}
+                            </option>
 
-                        <datalist id="ingredient-unit-options">
-                            {UNIT_OPTIONS.map((unit) => (
-                                <option key={unit} value={unit} />
+                            {units.map((unit) => (
+                                <option key={unit.id} value={unit.id}>
+                                    {unit.name} ({unit.symbol})
+                                </option>
                             ))}
-                        </datalist>
+                        </select>
 
-                        <p className="text-xs text-muted">
-                            Bạn có thể chọn gợi ý hoặc nhập đơn vị khác.
-                        </p>
+                        {unitsError ? (
+                            <div className="space-y-2">
+                                <p role="alert" className="text-xs text-red-600">
+                                    {unitsError}
+                                </p>
+
+                                <button
+                                    type="button"
+                                    onClick={() => void loadUnits()}
+                                    disabled={unitsLoading}
+                                    className="text-xs font-semibold text-forest hover:underline disabled:opacity-50"
+                                >
+                                    Tải lại đơn vị
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted">
+                                Chọn đơn vị mặc định dùng để quản lý nguyên liệu.
+                            </p>
+                        )}
                     </div>
 
                     <label
@@ -297,7 +370,10 @@ export default function IngredientFormModal({
                             type="checkbox"
                             checked={formData.is_allergen}
                             onChange={(event) =>
-                                updateForm('is_allergen', event.target.checked)
+                                updateForm(
+                                    'is_allergen',
+                                    event.target.checked,
+                                )
                             }
                             className="mt-1 size-4 shrink-0 accent-forest"
                         />
@@ -327,7 +403,10 @@ export default function IngredientFormModal({
                             role="alert"
                             className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700"
                         >
-                            <CircleAlert size={17} className="mt-0.5 shrink-0" />
+                            <CircleAlert
+                                size={17}
+                                className="mt-0.5 shrink-0"
+                            />
                             <p>{formError}</p>
                         </div>
                     )}
@@ -347,12 +426,19 @@ export default function IngredientFormModal({
                             disabled={
                                 saving ||
                                 categoriesLoading ||
-                                categories.length === 0
+                                !!categoriesError ||
+                                categories.length === 0 ||
+                                unitsLoading ||
+                                !!unitsError ||
+                                units.length === 0
                             }
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {saving && (
-                                <LoaderCircle size={17} className="animate-spin" />
+                                <LoaderCircle
+                                    size={17}
+                                    className="animate-spin"
+                                />
                             )}
 
                             {saving

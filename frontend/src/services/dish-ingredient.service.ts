@@ -1,25 +1,4 @@
-import type { DishIngredientListResponse, IngredientRole } from "../types/dish-ingredient"
-
-export interface DishIngredient {
-  ingredient_id: string
-  ingredient_name: string
-  ingredient_category_id: string
-  ingredient_category_name: string
-  quantity_per_person: number
-  unit: string
-  ingredient_role: IngredientRole
-  is_optional: boolean
-  preparation_note: string | null
-}
-
-export interface DishIngredientInput {
-  ingredient_id: string
-  quantity_per_person: number
-  unit: string
-  ingredient_role: IngredientRole
-  is_optional: boolean
-  preparation_note: string | null
-}
+import type { DishIngredientInput, DishIngredientListResponse } from "../types/dish-ingredient"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 

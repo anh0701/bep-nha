@@ -263,3 +263,6 @@ GET {{baseUrl}}/api/dishes/119/ingredients
 
 ###
 GET {{baseUrl}}/api/by-ingredients?ids=1,3,16
+
+###
+GET {{baseUrl}}/api/units
