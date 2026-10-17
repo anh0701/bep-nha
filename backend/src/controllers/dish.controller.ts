@@ -9,8 +9,9 @@ import {
     randomize,
     getDishById,
     searchDishesByIngredients,
+    searchDishesPaginated,
 } from '../services/dish.service.js'
-import { MealRole } from '../repositories/dish.repository.js'
+import { MealRole } from '../models/dish.model.js'
 
 function isDatabaseError(
     error: unknown,
@@ -29,15 +30,51 @@ function isValidId(id: string): boolean {
 }
 
 export async function getDishes(
-    _req: Request,
+    req: Request,
     res: Response,
 ): Promise<void> {
+    const page = Number(req.query.page ?? 1)
+    const limit = Number(req.query.limit ?? 10)
+    const search =
+        typeof req.query.search === 'string'
+            ? req.query.search.trim()
+            : ''
+
+    const categoryId =
+        typeof req.query.categoryId === 'string'
+            ? req.query.categoryId
+            : ''
+    if (
+        !Number.isInteger(page) ||
+        page < 1 ||
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 100
+    ) {
+        res.status(400).json({
+            message: 'Invalid page or limit',
+        })
+        return
+    }
+
     try {
-        const dishes = await getAllDishes()
-        res.status(200).json({ data: dishes, total: dishes.length })
+        const result = await searchDishesPaginated(
+            page,
+            limit,
+            search,
+            categoryId
+        )
+
+        res.status(200).json({
+            data: result.data,
+            total: result.pagination.totalItems,
+            pagination: result.pagination,
+        })
     } catch (error) {
         console.error('Failed to get dishes:', error)
-        res.status(500).json({ message: 'Cannot retrieve dishes' })
+        res.status(500).json({
+            message: 'Cannot retrieve dishes',
+        })
     }
 }
 

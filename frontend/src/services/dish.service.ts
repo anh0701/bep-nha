@@ -3,6 +3,8 @@ import type {
   DishByIngredientsResponse,
   DishFormData,
   DishListResponse,
+  GetDishesPaginatedParams,
+  PaginatedDishResponse,
 } from '../types/dish'
 import type { DishIngredientListResponse } from '../types/dish-ingredient'
 
@@ -171,4 +173,34 @@ export async function getDishesByIngredients(
   }
 
   return result as DishByIngredientsResponse
+}
+
+export async function getDishesPaginated({
+  page,
+  limit,
+  search = '',
+  categoryId,
+}: GetDishesPaginatedParams): Promise<PaginatedDishResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  })
+
+  if (search.trim()) {
+    params.set('search', search.trim())
+  }
+
+  if (categoryId && categoryId !== 'all') {
+    params.set('categoryId', categoryId)
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/dishes?${params.toString()}`,
+  )
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách món ăn')
+  }
+
+  return response.json() as Promise<PaginatedDishResponse>
 }

@@ -1,3 +1,5 @@
+import type { PaginatedResponse } from "./pagination"
+
 export interface Ingredient {
   id: string
   name: string
@@ -25,3 +27,6 @@ export interface IngredientFormData {
 export interface IngredientStatusInput {
   is_active: boolean
 }
+
+export interface PaginatedIngredientResponse
+  extends PaginatedResponse<Ingredient> {}

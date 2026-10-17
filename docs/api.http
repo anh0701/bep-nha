@@ -12,6 +12,15 @@ GET {{baseUrl}}/api/db-check
 GET {{baseUrl}}/api/dishes
 
 ###
+GET {{baseUrl}}/api/dishes?page=2&limit=10
+
+### 
+GET {{baseUrl}}/api/dishes?search=canh
+
+###
+GET {{baseUrl}}/api/dishes?page=2&limit=10&search=canh
+
+###
 POST {{baseUrl}}/api/dishes
 Content-Type: application/json
 Accept: application/json

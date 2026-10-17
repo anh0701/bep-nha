@@ -1,3 +1,5 @@
+import type { PaginatedResponse } from "./pagination"
+
 export type MealRole =
   | 'main'
   | 'vegetable'
@@ -43,4 +45,14 @@ export interface DishByIngredients {
 export interface DishByIngredientsResponse {
   data: DishByIngredients[]
   total: number
+}
+
+export interface PaginatedDishResponse
+  extends PaginatedResponse<Dish> {}
+
+export interface GetDishesPaginatedParams {
+  page: number
+  limit: number
+  search?: string
+  categoryId?: string
 }

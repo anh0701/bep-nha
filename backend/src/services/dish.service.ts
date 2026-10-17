@@ -1,3 +1,4 @@
+import { IngredientMatchDish, MealRole, RandomDishCandidate } from '../models/dish.model.js'
 import {
   findAllDishes,
   createDish as insertDish,
@@ -6,9 +7,8 @@ import {
   findRandomCandidates,
   findDishById,
   findDishesByIngredients,
+  findDishesPaginated,
 } from '../repositories/dish.repository.js'
-
-import type { IngredientMatchDish, MealRole, RandomDishCandidate } from '../repositories/dish.repository.js'
 
 import { saveMenu } from '../repositories/menu.repository.js'
 
@@ -228,4 +228,13 @@ export async function searchDishesByIngredients(
   }
 
   return findDishesByIngredients(uniqueIds)
+}
+
+export async function searchDishesPaginated(
+  page: number,
+  limit: number,
+  search: string,
+  categoryId: string,
+) {
+  return findDishesPaginated({ page, limit, search, categoryId })
 }

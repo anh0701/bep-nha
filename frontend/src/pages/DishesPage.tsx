@@ -1,7 +1,8 @@
-
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
+  ChevronLeft,
+  ChevronRight,
   Pencil,
   Plus,
   Search,
@@ -11,7 +12,10 @@ import {
   X,
 } from 'lucide-react'
 
-import { getDishes, deleteDish } from '../services/dish.service'
+import {
+  getDishesPaginated,
+  deleteDish,
+} from '../services/dish.service'
 import { getCategories } from '../services/category.service'
 
 import type { Dish } from '../types/dish'
@@ -29,6 +33,12 @@ export default function DishesPage() {
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,45 +50,81 @@ export default function DishesPage() {
   const [dishToDelete, setDishToDelete] = useState<Dish | null>(null)
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null)
 
+  // Lấy danh mục
   useEffect(() => {
-    async function loadData() {
+    let cancelled = false
+
+    async function loadCategories() {
+      try {
+        const result = await getCategories()
+
+        if (!cancelled) {
+          setCategories(result.data)
+        }
+      } catch (err) {
+        console.error('Failed to load categories:', err)
+
+        if (!cancelled) {
+          setError('Không thể tải danh mục món ăn. Vui lòng thử lại.')
+        }
+      }
+    }
+
+    loadCategories()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Lấy danh sách món ăn theo trang, từ khóa và danh mục
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadDishes() {
       try {
         setLoading(true)
         setError(null)
 
-        const [dishResult, categoryResult] = await Promise.all([
-          getDishes(),
-          getCategories(),
-        ])
+        const result = await getDishesPaginated({
+          page,
+          limit,
+          search: search.trim(),
+          categoryId:
+            selectedCategory === 'all' ? '' : selectedCategory,
+        })
 
-        setDishes(dishResult.data)
-        setCategories(categoryResult.data)
+        if (cancelled) return
+
+        // Nếu trang hiện tại không còn hợp lệ, quay về trang cuối.
+        if (result.pagination.totalPages > 0 &&
+            page > result.pagination.totalPages) {
+          setPage(result.pagination.totalPages)
+          return
+        }
+
+        setDishes(result.data)
+        setTotalItems(result.pagination.totalItems)
+        setTotalPages(result.pagination.totalPages)
       } catch (err) {
         console.error('Failed to load dish catalog:', err)
-        setError('Không thể tải kho món ăn. Vui lòng thử lại.')
+
+        if (!cancelled) {
+          setError('Không thể tải kho món ăn. Vui lòng thử lại.')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
-    loadData()
-  }, [])
+    loadDishes()
 
-  const filteredDishes = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('vi')
-
-    return dishes.filter((dish) => {
-      const matchesName = dish.name
-        .toLocaleLowerCase('vi')
-        .includes(keyword)
-
-      const matchesCategory =
-        selectedCategory === 'all' ||
-        dish.category_id === selectedCategory
-
-      return matchesName && matchesCategory
-    })
-  }, [dishes, search, selectedCategory])
+    return () => {
+      cancelled = true
+    }
+  }, [page, limit, search, selectedCategory, refreshKey])
 
   function openCreateForm() {
     setEditingDish(null)
@@ -95,14 +141,12 @@ export default function DishesPage() {
     setEditingDish(null)
   }
 
-  function handleDishSaved(savedDish: Dish) {
-    setDishes((currentDishes) => [
-      savedDish,
-      ...currentDishes.filter((dish) => dish.id !== savedDish.id),
-    ])
-
-    setSelectedCategory('all')
+  function handleDishSaved(_savedDish: Dish) {
+    closeCreateForm()
     setSearch('')
+    setSelectedCategory('all')
+    setPage(1)
+    setRefreshKey((current) => current + 1)
   }
 
   async function handleDeleteDish(dish: Dish) {
@@ -112,17 +156,39 @@ export default function DishesPage() {
     try {
       await deleteDish(dish.id)
 
-      setDishes((currentDishes) =>
-        currentDishes.filter((item) => item.id !== dish.id),
-      )
-
       setDishToDelete(null)
+
+      // Nếu xóa phần tử cuối cùng trên trang, chuyển về trang trước.
+      if (dishes.length === 1 && page > 1) {
+        setPage((current) => current - 1)
+      } else {
+        setRefreshKey((current) => current + 1)
+      }
+
+      if (selectedDish?.id === dish.id) {
+        setSelectedDish(null)
+      }
     } catch (err) {
       console.error('Failed to delete dish:', err)
       setDeleteError('Không thể xóa món ăn. Vui lòng thử lại.')
     } finally {
       setDeletingDishId(null)
     }
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  function handleCategoryChange(value: string) {
+    setSelectedCategory(value)
+    setPage(1)
+  }
+
+  function handleLimitChange(value: string) {
+    setLimit(Number(value))
+    setPage(1)
   }
 
   return (
@@ -144,12 +210,14 @@ export default function DishesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-2xl bg-sage/60 px-4 py-3">
-            <p className="text-xs text-muted">Tổng số món đang hoạt động</p>
-            <p className="text-xl font-bold text-forest">
-              {loading ? '—' : dishes.length}
+          {/* <div className="rounded-2xl bg-sage/60 px-4 py-3">
+            <p className="text-xs text-muted">
+              Tổng số món đang hoạt động
             </p>
-          </div>
+            <p className="text-xl font-bold text-forest">
+              {loading ? '—' : totalItems}
+            </p>
+          </div> */}
 
           <button
             type="button"
@@ -173,7 +241,7 @@ export default function DishesPage() {
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => handleSearchChange(event.target.value)}
             placeholder="Tìm món ăn theo tên..."
             aria-label="Tìm món ăn theo tên"
             className="w-full rounded-2xl border border-beige bg-white py-3.5 pr-4 pl-11 text-sm text-ink outline-none transition placeholder:text-muted/80 focus:border-forest"
@@ -190,18 +258,38 @@ export default function DishesPage() {
             <CategorySelect
               categories={categories}
               value={selectedCategory}
-              onChange={setSelectedCategory}
+              onChange={handleCategoryChange}
               includeAll
               allLabel="Tất cả danh mục"
               ariaLabel="Lọc theo danh mục"
             />
           </div>
 
-          <p className="text-sm text-muted sm:ml-auto">
-            {loading
-              ? 'Đang tải món ăn...'
-              : `${filteredDishes.length} / ${dishes.length} món`}
-          </p>
+          <div className="flex items-center gap-3 sm:ml-auto">
+            <label
+              htmlFor="dish-page-limit"
+              className="whitespace-nowrap text-sm text-muted"
+            >
+              Hiển thị
+            </label>
+
+            <select
+              id="dish-page-limit"
+              value={limit}
+              onChange={(event) => handleLimitChange(event.target.value)}
+              className="rounded-xl border border-beige bg-white px-3 py-2 text-sm text-ink outline-none focus:border-forest"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+
+            <span className="whitespace-nowrap text-sm text-muted">
+              {loading
+                ? 'Đang tải...'
+                : `${dishes.length} / ${totalItems} món`}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -237,13 +325,13 @@ export default function DishesPage() {
 
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => setRefreshKey((current) => current + 1)}
               className="mt-4 rounded-xl bg-forest px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest/90"
             >
-              Tải lại trang
+              Thử tải lại
             </button>
           </div>
-        ) : filteredDishes.length === 0 ? (
+        ) : dishes.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-beige px-5 py-16 text-center">
             <Utensils size={30} className="mx-auto text-muted/70" />
 
@@ -260,6 +348,7 @@ export default function DishesPage() {
               onClick={() => {
                 setSearch('')
                 setSelectedCategory('all')
+                setPage(1)
               }}
               className="mt-4 text-sm font-semibold text-forest hover:underline"
             >
@@ -267,76 +356,108 @@ export default function DishesPage() {
             </button>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-beige/80 bg-white">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-beige/80 bg-white/70 px-4 py-3 text-xs font-semibold tracking-wide text-muted sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.6fr)_auto] sm:px-5">
-              <span>TÊN MÓN ĂN</span>
-              <span className="hidden sm:block">DANH MỤC</span>
-              <span>TRẠNG THÁI</span>
-            </div>
+          <>
+            <div className="overflow-hidden rounded-2xl border border-beige/80 bg-white">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center border-b border-beige/80 bg-white/70 px-4 py-3 text-xs font-semibold tracking-wide text-muted sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.6fr)_auto] sm:px-5">
+                <span>TÊN MÓN ĂN</span>
+                <span className="hidden sm:block">DANH MỤC</span>
+                <span>TRẠNG THÁI</span>
+              </div>
 
-            {filteredDishes.map((dish) => (
-              <article
-                key={dish.id}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-beige/60 px-4 py-4 last:border-b-0 hover:bg-cream/60 sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.6fr)_auto] sm:px-5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage/70 text-forest">
-                    <Utensils size={19} />
+              {dishes.map((dish) => (
+                <article
+                  key={dish.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-beige/60 px-4 py-4 last:border-b-0 hover:bg-cream/60 sm:grid-cols-[minmax(0,1fr)_minmax(140px,0.6fr)_auto] sm:px-5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sage/70 text-forest">
+                      <Utensils size={19} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDish(dish)}
+                        className="block max-w-full truncate text-left text-sm font-semibold text-ink transition hover:text-forest hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                        title={`Xem chi tiết ${dish.name}`}
+                      >
+                        {dish.name}
+                      </button>
+
+                      <p className="mt-1 text-xs text-muted sm:hidden">
+                        {dish.category}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDish(dish)}
-                      className="block max-w-full truncate text-left text-sm font-semibold text-ink transition hover:text-forest hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-                      title={`Xem chi tiết ${dish.name}`}
-                    >
-                      {dish.name}
-                    </button>
-
-                    <p className="mt-1 text-xs text-muted sm:hidden">
-                      {dish.category}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="hidden text-sm text-muted sm:block">
-                  {dish.category}
-                </span>
-
-                <div className="flex items-center gap-1">
-                  <span className="hidden items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest sm:inline-flex">
-                    <span className="size-1.5 rounded-full bg-forest" />
-                    Đang dùng
+                  <span className="hidden text-sm text-muted sm:block">
+                    {dish.category}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => openEditForm(dish)}
-                    aria-label={`Sửa món ${dish.name}`}
-                    title="Sửa món ăn"
-                    className="rounded-lg p-2 text-muted transition hover:bg-sage/70 hover:text-forest"
-                  >
-                    <Pencil size={16} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <span className="hidden items-center gap-1.5 rounded-full bg-sage/60 px-2.5 py-1 text-xs font-medium text-forest sm:inline-flex">
+                      <span className="size-1.5 rounded-full bg-forest" />
+                      Đang dùng
+                    </span>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteError(null)
-                      setDishToDelete(dish)
-                    }}
-                    disabled={deletingDishId === dish.id}
-                    aria-label={`Xóa món ${dish.name}`}
-                    title="Xóa món ăn"
-                    className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(dish)}
+                      aria-label={`Sửa món ${dish.name}`}
+                      title="Sửa món ăn"
+                      className="rounded-lg p-2 text-muted transition hover:bg-sage/70 hover:text-forest"
+                    >
+                      <Pencil size={16} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null)
+                        setDishToDelete(dish)
+                      }}
+                      disabled={deletingDishId === dish.id}
+                      aria-label={`Xóa món ${dish.name}`}
+                      title="Xóa món ăn"
+                      className="rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted">
+                Trang {page} / {Math.max(totalPages, 1)}
+                <span className="mx-2">·</span>
+                Tổng {totalItems} món
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => current - 1)}
+                  disabled={page <= 1 || loading}
+                  className="inline-flex items-center gap-1 rounded-xl border border-beige px-3 py-2 text-sm font-medium text-ink transition hover:bg-sage/40 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                  Trang trước
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={page >= totalPages || loading}
+                  className="inline-flex items-center gap-1 rounded-xl border border-beige px-3 py-2 text-sm font-medium text-ink transition hover:bg-sage/40 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Trang sau
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </section>
 
@@ -371,10 +492,10 @@ export default function DishesPage() {
       )}
 
       {selectedDish && (
-          <DishDetailModal
-              dish={selectedDish}
-              onClose={() => setSelectedDish(null)}
-          />
+        <DishDetailModal
+          dish={selectedDish}
+          onClose={() => setSelectedDish(null)}
+        />
       )}
     </div>
   )

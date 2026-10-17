@@ -1,21 +1,6 @@
 
 import { pool } from '../db/pool.js'
-
-export type MealRole =
-  | 'main'
-  | 'vegetable'
-  | 'soup'
-  | 'one_dish'
-  | 'side'
-
-export interface Dish {
-  id: string
-  name: string
-  category_id: string
-  category: string
-  is_active: boolean
-  meal_role: MealRole | null
-}
+import { Dish, DishPaginationParams, IngredientMatchDish, MealRole, PaginatedDishes, RandomDishCandidate } from '../models/dish.model.js'
 
 export async function findAllDishes(): Promise<Dish[]> {
   const result = await pool.query<Dish>(`
@@ -33,6 +18,63 @@ export async function findAllDishes(): Promise<Dish[]> {
   `)
 
   return result.rows
+}
+
+export async function findDishesPaginated({
+  page,
+  limit,
+  search,
+  categoryId,
+}: DishPaginationParams): Promise<PaginatedDishes> {
+  const offset = (page - 1) * limit
+  const keyword = `%${search}%`
+  const categoryIdValue =
+    categoryId && categoryId !== 'all' ? categoryId : null
+
+  const [itemsResult, countResult] = await Promise.all([
+    pool.query<Dish>(
+      `
+      SELECT
+        d.id,
+        d.name,
+        d.category_id,
+        c.name AS category,
+        d.meal_role,
+        d.is_active
+      FROM dishes d
+      INNER JOIN categories c ON c.id = d.category_id
+      WHERE d.is_active = TRUE
+        AND d.name ILIKE $1
+        AND ($2::bigint IS NULL OR d.category_id = $2)
+      ORDER BY d.name ASC
+      LIMIT $3 OFFSET $4
+      `,
+      [keyword, categoryIdValue, limit, offset],
+    ),
+
+    pool.query<{ total: string }>(
+      `
+      SELECT COUNT(*) AS total
+      FROM dishes d
+      WHERE d.is_active = TRUE
+        AND d.name ILIKE $1
+        AND ($2::bigint IS NULL OR d.category_id = $2)
+      `,
+      [keyword, categoryIdValue],
+    ),
+  ])
+
+  const totalItems = Number(countResult.rows[0].total)
+
+  return {
+    data: itemsResult.rows,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    },
+  }
 }
 
 export async function createDish(
@@ -101,14 +143,6 @@ export async function deactivateDish(id: string): Promise<boolean> {
   )
 
   return result.rowCount === 1
-}
-
-
-export interface RandomDishCandidate extends Dish {
-  meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side'
-  category_cook_count: string
-  cooked_recently: boolean
-  allergen_warnings: string[]
 }
 
 export async function findRandomCandidates(
@@ -215,21 +249,6 @@ export async function findDishById(id: string): Promise<Dish | null> {
   )
 
   return result.rows[0] ?? null
-}
-
-export interface IngredientMatchDish {
-  id: string
-  name: string
-  category_id: string
-  category: string
-  meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side' | null
-  matched_count: number
-  total_ingredients: number
-  missing_count: number
-  matched_ingredients: string[]
-  missing_ingredients: string[]
-  match_percentage: number
-  can_cook_now: boolean
 }
 
 export async function findDishesByIngredients(
