@@ -1,7 +1,9 @@
 import type {
+  GetIngredientsPaginatedParams,
   Ingredient,
   IngredientFormData,
   IngredientListResponse,
+  PaginatedIngredientResponse,
 } from '../types/ingredient'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
@@ -86,4 +88,34 @@ export async function updateIngredientStatus(
   const result = await parseResponse<{ data: Ingredient }>(response)
 
   return result.data
+}
+
+export async function getIngredientsPaginated({
+  page,
+  limit,
+  search = '',
+  categoryId,
+}: GetIngredientsPaginatedParams): Promise<PaginatedIngredientResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  })
+
+  if (search.trim()) {
+    params.set('search', search.trim())
+  }
+
+  if (categoryId && categoryId !== 'all') {
+    params.set('categoryId', categoryId)
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/ingredients?${params.toString()}`,
+  )
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách nguyên liệu')
+  }
+
+  return response.json() as Promise<PaginatedIngredientResponse>
 }

@@ -1,3 +1,4 @@
+import { IngredientInput } from '../models/ingredient.model.js'
 import {
   findAllIngredients,
   findAllergenIngredients,
@@ -5,11 +6,10 @@ import {
   createIngredient as insertIngredient,
   updateIngredient as editIngredient,
   setIngredientStatus as changeIngredientStatus,
+  findIngredientsPaginated,
+  getIngredientStatsRepository,
 } from '../repositories/ingredient.repository.js'
 
-import type {
-  IngredientInput,
-} from '../repositories/ingredient.repository.js'
 
 function normalizeInput(
   input: IngredientInput,
@@ -82,4 +82,17 @@ export async function modifyIngredientStatus(
   isActive: boolean,
 ) {
   return changeIngredientStatus(id, isActive)
+}
+
+export async function getPaginatedIngredients(params: {
+  page: number
+  limit: number
+  search?: string
+  categoryId?: string
+}) {
+  return findIngredientsPaginated(params)
+}
+
+export async function getIngredientStats() {
+  return getIngredientStatsRepository()
 }

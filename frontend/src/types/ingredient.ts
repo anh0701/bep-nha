@@ -28,5 +28,18 @@ export interface IngredientStatusInput {
   is_active: boolean
 }
 
-export interface PaginatedIngredientResponse
-  extends PaginatedResponse<Ingredient> {}
+export interface GetIngredientsPaginatedParams {
+  page: number
+  limit: number
+  search?: string
+  categoryId?: string
+}
+
+export interface IngredientStats {
+  totalIngredients: number
+  activeIngredients: number
+}
+
+export interface PaginatedIngredientResponse extends PaginatedResponse<Ingredient> {
+  stats: IngredientStats
+}

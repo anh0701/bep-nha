@@ -1,25 +1,6 @@
 import { pool } from '../db/pool.js'
 import type { PoolClient } from 'pg'
-
-export interface Ingredient {
-  id: string
-  name: string
-  ingredient_category_id: string
-  ingredient_category_name: string
-  default_unit_id: string
-  default_unit: string
-  is_active: boolean
-  is_allergen: boolean
-  created_at: Date
-  updated_at: Date
-}
-
-export interface IngredientInput {
-  name: string
-  ingredient_category_id: string
-  default_unit_id: string
-  is_allergen?: boolean
-}
+import { Ingredient, IngredientInput, IngredientPaginationParams, PaginatedIngredients } from '../models/ingredient.model.js'
 
 async function syncAllergenStatus(
   client: PoolClient,
@@ -87,6 +68,83 @@ export async function findAllIngredients(
   )
 
   return result.rows
+}
+
+export async function findIngredientsPaginated({
+  page,
+  limit,
+  search,
+  categoryId,
+}: IngredientPaginationParams): Promise<PaginatedIngredients> {
+  const offset = (page - 1) * limit
+  const keyword = search?.trim() || null
+  const categoryIdValue =
+    categoryId && categoryId !== 'all'
+      ? categoryId
+      : null
+
+  const [itemsResult, countResult] = await Promise.all([
+    pool.query<Ingredient>(
+      `
+      ${ingredientSelect}
+      WHERE (
+        $1::text IS NULL
+        OR i.name ILIKE '%' || $1 || '%'
+        OR ic.name ILIKE '%' || $1 || '%'
+      )
+      AND (
+        $2::bigint IS NULL
+        OR i.ingredient_category_id = $2::bigint
+      )
+      ORDER BY i.name ASC
+      LIMIT $3 OFFSET $4
+      `,
+      [keyword, categoryIdValue, limit, offset],
+    ),
+
+    pool.query<{ total: string }>(
+      `
+      SELECT COUNT(*) AS total
+      FROM ingredients i
+      JOIN ingredient_categories ic
+        ON ic.id = i.ingredient_category_id
+      WHERE (
+        $1::text IS NULL
+        OR i.name ILIKE '%' || $1 || '%'
+        OR ic.name ILIKE '%' || $1 || '%'
+      )
+      AND (
+        $2::bigint IS NULL
+        OR i.ingredient_category_id = $2::bigint
+      )
+      `,
+      [keyword, categoryIdValue],
+    ),
+  ])
+
+  const totalItems = Number(countResult.rows[0].total)
+
+  return {
+    data: itemsResult.rows,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+    },
+  }
+}
+
+export async function getIngredientStatsRepository() {
+  const result = await pool.query(`
+    SELECT
+      COUNT(*)::int AS total_ingredients,
+      COUNT(*) FILTER (WHERE is_active = TRUE)::int
+        AS active_ingredients
+    FROM ingredients
+  `)
+
+  return result.rows[0]
 }
 
 export async function findAllergenIngredients(

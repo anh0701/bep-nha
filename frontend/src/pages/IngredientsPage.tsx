@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+
+import { useEffect, useRef, useState } from 'react'
 import {
   Check,
+  ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Pencil,
   Plus,
@@ -12,7 +15,7 @@ import {
 
 import {
   createIngredient,
-  getIngredients,
+  getIngredientsPaginated,
   updateIngredient,
   updateIngredientStatus,
 } from '../services/ingredient.service'
@@ -32,6 +35,18 @@ export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [categories, setCategories] = useState<IngredientCategory[]>([])
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [totalItems, setTotalItems] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const [stats, setStats] = useState({
+    totalIngredients: 0,
+    activeIngredients: 0,
+  })
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,18 +61,52 @@ export default function IngredientsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
 
+  const hasLoadedRef = useRef(false)
+  const requestIdRef = useRef(0)
+
   async function loadIngredients() {
+    const requestId = ++requestIdRef.current
+
     try {
-      setLoading(true)
+      // Chỉ hiển thị màn hình loading ở lần tải đầu tiên.
+      if (!hasLoadedRef.current) {
+        setLoading(true)
+      }
+
       setError(null)
 
-      const result = await getIngredients()
+      const result = await getIngredientsPaginated({
+        page,
+        limit,
+        search: debouncedSearch,
+      })
+
+      // Bỏ qua kết quả của request cũ nếu người dùng đã tìm kiếm tiếp.
+      if (requestId !== requestIdRef.current) return
+
+      // Nếu trang hiện tại không còn hợp lệ, chuyển về trang cuối.
+      if (
+        result.pagination.totalPages > 0 &&
+        page > result.pagination.totalPages
+      ) {
+        setPage(result.pagination.totalPages)
+        return
+      }
+
       setIngredients(result.data)
+      setTotalItems(result.pagination.totalItems)
+      setTotalPages(result.pagination.totalPages)
+      setStats(result.stats)
     } catch (err) {
+      if (requestId !== requestIdRef.current) return
+
       console.error('Failed to load ingredients:', err)
       setError('Không thể tải kho nguyên liệu. Vui lòng thử lại.')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) {
+        hasLoadedRef.current = true
+        setLoading(false)
+      }
     }
   }
 
@@ -78,26 +127,30 @@ export default function IngredientsPage() {
     }
   }
 
+  // Tải danh mục một lần.
   useEffect(() => {
-    void loadIngredients()
     void loadIngredientCategories()
   }, [])
 
-  const filteredIngredients = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('vi')
+  // Chỉ tải danh sách khi trang, số dòng, từ khóa debounce hoặc refresh thay đổi.
+  useEffect(() => {
+    void loadIngredients()
 
-    return ingredients.filter((ingredient) => {
-      const name = ingredient.name.toLocaleLowerCase('vi')
-      const category = ingredient.ingredient_category_name
-        .toLocaleLowerCase('vi')
+    return () => {
+      // Vô hiệu hóa request cũ khi điều kiện tải dữ liệu thay đổi.
+      requestIdRef.current += 1
+    }
+  }, [page, limit, debouncedSearch, refreshKey])
 
-      return name.includes(keyword) || category.includes(keyword)
-    })
-  }, [ingredients, search])
+  // Chờ người dùng ngừng gõ 300 ms rồi mới tìm kiếm.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim())
+      setPage(1)
+    }, 300)
 
-  const activeCount = ingredients.filter(
-    (ingredient) => ingredient.is_active,
-  ).length
+    return () => clearTimeout(timer)
+  }, [search])
 
   function openCreateForm() {
     setEditingIngredient(null)
@@ -134,6 +187,9 @@ export default function IngredientsPage() {
 
       return [savedIngredient, ...current]
     })
+
+    // Cập nhật lại danh sách và thống kê toàn database.
+    setRefreshKey((current) => current + 1)
   }
 
   async function handleToggleStatus(ingredient: Ingredient) {
@@ -153,6 +209,9 @@ export default function IngredientsPage() {
             : item,
         ),
       )
+
+      // Lấy lại số lượng hoạt động từ database.
+      setRefreshKey((current) => current + 1)
     } catch (err) {
       console.error('Failed to update ingredient status:', err)
       setStatusError(
@@ -193,23 +252,25 @@ export default function IngredientsPage() {
         </button>
       </section>
 
+      {/* Thống kê toàn kho */}
       <section className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="rounded-2xl bg-sage/60 p-4 sm:p-5">
           <p className="text-sm text-muted">Tổng nguyên liệu</p>
           <p className="mt-2 text-2xl font-bold text-forest">
-            {loading ? '—' : ingredients.length}
+            {loading ? '—' : stats.totalIngredients}
           </p>
         </div>
 
         <div className="rounded-2xl bg-white p-4 ring-1 ring-beige/80 sm:p-5">
           <p className="text-sm text-muted">Đang hoạt động</p>
           <p className="mt-2 text-2xl font-bold text-forest">
-            {loading ? '—' : activeCount}
+            {loading ? '—' : stats.activeIngredients}
           </p>
         </div>
       </section>
 
       <section className="space-y-4">
+        {/* Tìm kiếm */}
         <div className="relative">
           <Search
             size={19}
@@ -226,7 +287,7 @@ export default function IngredientsPage() {
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="text-sm font-semibold text-ink">
             Danh sách nguyên liệu
           </h2>
@@ -234,7 +295,7 @@ export default function IngredientsPage() {
           <p className="text-sm text-muted">
             {loading
               ? 'Đang tải...'
-              : `${filteredIngredients.length} / ${ingredients.length} nguyên liệu`}
+              : `${ingredients.length} / ${totalItems} nguyên liệu`}
           </p>
         </div>
 
@@ -267,32 +328,36 @@ export default function IngredientsPage() {
             <p className="text-sm text-red-600">{error}</p>
             <button
               type="button"
-              onClick={() => void loadIngredients()}
+              onClick={() => setRefreshKey((current) => current + 1)}
               className="mt-4 rounded-xl bg-forest px-4 py-2.5 text-sm font-semibold text-white hover:bg-forest/90"
             >
               Thử lại
             </button>
           </div>
-        ) : filteredIngredients.length === 0 ? (
+        ) : ingredients.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-beige px-5 py-14 text-center">
             <Search size={28} className="mx-auto text-muted/70" />
 
             <h3 className="mt-4 font-semibold text-ink">
-              {search
+              {debouncedSearch
                 ? 'Không tìm thấy nguyên liệu'
                 : 'Kho nguyên liệu đang trống'}
             </h3>
 
             <p className="mt-2 text-sm text-muted">
-              {search
+              {debouncedSearch
                 ? 'Thử từ khóa khác nhé.'
                 : 'Thêm nguyên liệu đầu tiên để sử dụng cho các món ăn.'}
             </p>
 
-            {search ? (
+            {debouncedSearch ? (
               <button
                 type="button"
-                onClick={() => setSearch('')}
+                onClick={() => {
+                  setSearch('')
+                  setDebouncedSearch('')
+                  setPage(1)
+                }}
                 className="mt-4 text-sm font-semibold text-forest hover:underline"
               >
                 Xóa tìm kiếm
@@ -317,7 +382,7 @@ export default function IngredientsPage() {
               <span>THAO TÁC</span>
             </div>
 
-            {filteredIngredients.map((ingredient) => (
+            {ingredients.map((ingredient) => (
               <article
                 key={ingredient.id}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-beige/60 px-4 py-4 last:border-b-0 hover:bg-cream/50 sm:grid-cols-[minmax(0,1fr)_minmax(100px,0.5fr)_minmax(70px,0.35fr)_auto] sm:px-5"
@@ -340,20 +405,16 @@ export default function IngredientsPage() {
                   </div>
 
                   <span
-                    className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium sm:hidden ${
-                      ingredient.is_active
-                        ? 'bg-sage/60 text-forest'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
+                    className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium sm:hidden ${ingredient.is_active
+                      ? 'bg-sage/60 text-forest'
+                      : 'bg-gray-100 text-gray-500'
+                      }`}
                   >
                     <span
-                      className={`size-1.5 rounded-full ${
-                        ingredient.is_active
-                          ? 'bg-forest'
-                          : 'bg-gray-400'
-                      }`}
+                      className={`size-1.5 rounded-full ${ingredient.is_active ? 'bg-forest' : 'bg-gray-400'
+                        }`}
                     />
-                    {ingredient.is_active ? 'Đang dùng' : 'Ngừng dùng'}
+                    {ingredient.is_active ? 'Đang hoạt động' : 'Ngừng sử dụng'}
                   </span>
                 </div>
 
@@ -376,6 +437,7 @@ export default function IngredientsPage() {
                     <Pencil size={16} />
                   </button>
 
+
                   <button
                     type="button"
                     onClick={() => void handleToggleStatus(ingredient)}
@@ -390,19 +452,80 @@ export default function IngredientsPage() {
                         ? 'Ngừng sử dụng'
                         : 'Kích hoạt'
                     }
-                    className="rounded-lg p-2 text-muted transition hover:bg-sage/70 hover:text-forest disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`inline-flex items-center justify-center rounded-xl p-2.5 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${ingredient.is_active
+                        ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                        : 'bg-transparent text-muted hover:bg-sage/50 hover:text-forest'
+                      }`}
                   >
                     {updatingId === ingredient.id ? (
-                      <LoaderCircle size={17} className="animate-spin" />
+                      <LoaderCircle size={23} className="animate-spin" />
                     ) : ingredient.is_active ? (
-                      <ToggleRight size={19} />
+                      <ToggleRight size={25} strokeWidth={2.2} />
                     ) : (
-                      <ToggleLeft size={19} />
+                      <ToggleLeft size={25} strokeWidth={2} />
                     )}
                   </button>
+
                 </div>
               </article>
             ))}
+          </div>
+        )}
+
+        {/* Điều khiển phân trang */}
+        {!loading && !error && totalItems > 0 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <span>Hiển thị</span>
+
+              <select
+                value={limit}
+                onChange={(event) => {
+                  setLimit(Number(event.target.value))
+                  setPage(1)
+                }}
+                className="rounded-lg border border-beige bg-white px-2 py-1.5 text-sm text-ink outline-none focus:border-forest"
+                aria-label="Số nguyên liệu mỗi trang"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+
+              <span>mỗi trang</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <span className="text-sm text-muted">
+                Trang {page} / {totalPages}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((current) => Math.max(1, current - 1))
+                  }
+                  disabled={page <= 1}
+                  className="inline-flex items-center gap-1 rounded-lg border border-beige bg-white px-3 py-2 text-sm font-medium text-ink transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                  Trước
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((current) => Math.min(totalPages, current + 1))
+                  }
+                  disabled={page >= totalPages}
+                  className="inline-flex items-center gap-1 rounded-lg border border-beige bg-white px-3 py-2 text-sm font-medium text-ink transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Sau
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>

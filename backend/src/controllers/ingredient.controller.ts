@@ -7,11 +7,10 @@ import {
     addIngredient,
     modifyIngredient,
     modifyIngredientStatus,
+    getPaginatedIngredients,
+    getIngredientStats,
 } from '../services/ingredient.service.js'
-
-import type {
-    IngredientInput,
-} from '../repositories/ingredient.repository.js'
+import { IngredientInput } from '../models/ingredient.model.js'
 
 function isValidId(id: string): boolean {
     return /^\d+$/.test(id) && BigInt(id) > 0n
@@ -119,15 +118,64 @@ export async function getIngredients(
     req: Request,
     res: Response,
 ) {
+    const pageValue = req.query.page
+    const limitValue = req.query.limit
+
+    const page =
+        typeof pageValue === 'string' ? Number(pageValue) : 1
+
+    const limit =
+        typeof limitValue === 'string' ? Number(limitValue) : 10
+
     const search =
         typeof req.query.search === 'string'
             ? req.query.search.trim()
             : undefined
 
-    try {
-        const ingredients = await getAllIngredients(search)
+    const categoryId =
+        typeof req.query.categoryId === 'string'
+            ? req.query.categoryId
+            : undefined
 
-        res.json({ data: ingredients })
+    if (
+        !Number.isInteger(page) ||
+        page < 1 ||
+        !Number.isInteger(limit) ||
+        limit < 1 ||
+        limit > 100
+    ) {
+        res.status(400).json({
+            message: 'Thông tin phân trang không hợp lệ.',
+        })
+        return
+    }
+
+    if (
+        categoryId !== undefined &&
+        categoryId !== 'all' &&
+        (!/^\d+$/.test(categoryId) || BigInt(categoryId) <= 0n)
+    ) {
+        res.status(400).json({
+            message: 'Danh mục nguyên liệu không hợp lệ.',
+        })
+        return
+    }
+
+    try {
+        const [ingredients, stats] = await Promise.all([
+            getPaginatedIngredients({ page, limit, search, categoryId }),
+            getIngredientStats(),
+        ])
+
+        return res.json({
+            data: ingredients.data,
+            pagination: ingredients.pagination,
+            stats: {
+                totalIngredients: stats.total_ingredients,
+                activeIngredients: stats.active_ingredients,
+            },
+        })
+
     } catch (error) {
         handleIngredientError(
             error,
