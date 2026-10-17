@@ -30,12 +30,15 @@ import type {
 } from '../types/ingredient'
 
 import type { IngredientCategory } from '../types/ingredient-category'
+import PageFilters from '../components/PageFilters'
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [categories, setCategories] = useState<IngredientCategory[]>([])
+
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [categoryId, setCategoryId] = useState('all')
 
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
@@ -68,7 +71,6 @@ export default function IngredientsPage() {
     const requestId = ++requestIdRef.current
 
     try {
-      // Chỉ hiển thị màn hình loading ở lần tải đầu tiên.
       if (!hasLoadedRef.current) {
         setLoading(true)
       }
@@ -79,9 +81,10 @@ export default function IngredientsPage() {
         page,
         limit,
         search: debouncedSearch,
+        categoryId,
       })
 
-      // Bỏ qua kết quả của request cũ nếu người dùng đã tìm kiếm tiếp.
+      // Bỏ qua kết quả của request cũ.
       if (requestId !== requestIdRef.current) return
 
       // Nếu trang hiện tại không còn hợp lệ, chuyển về trang cuối.
@@ -132,15 +135,14 @@ export default function IngredientsPage() {
     void loadIngredientCategories()
   }, [])
 
-  // Chỉ tải danh sách khi trang, số dòng, từ khóa debounce hoặc refresh thay đổi.
+  // Tải danh sách khi điều kiện lọc hoặc phân trang thay đổi.
   useEffect(() => {
     void loadIngredients()
 
     return () => {
-      // Vô hiệu hóa request cũ khi điều kiện tải dữ liệu thay đổi.
       requestIdRef.current += 1
     }
-  }, [page, limit, debouncedSearch, refreshKey])
+  }, [page, limit, debouncedSearch, categoryId, refreshKey])
 
   // Chờ người dùng ngừng gõ 300 ms rồi mới tìm kiếm.
   useEffect(() => {
@@ -188,7 +190,7 @@ export default function IngredientsPage() {
       return [savedIngredient, ...current]
     })
 
-    // Cập nhật lại danh sách và thống kê toàn database.
+    // Tải lại danh sách và thống kê.
     setRefreshKey((current) => current + 1)
   }
 
@@ -210,7 +212,7 @@ export default function IngredientsPage() {
         ),
       )
 
-      // Lấy lại số lượng hoạt động từ database.
+      // Cập nhật thống kê từ database.
       setRefreshKey((current) => current + 1)
     } catch (err) {
       console.error('Failed to update ingredient status:', err)
@@ -224,8 +226,19 @@ export default function IngredientsPage() {
     }
   }
 
+  function clearFilters() {
+    setSearch('')
+    setDebouncedSearch('')
+    setCategoryId('all')
+    setPage(1)
+  }
+
+  const hasActiveFilters =
+    Boolean(search.trim()) || categoryId !== 'all'
+
   return (
     <div className="mx-auto max-w-6xl space-y-7 px-5 py-7 md:px-10 md:py-10">
+      {/* Header */}
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2 text-sm text-muted">
@@ -270,41 +283,57 @@ export default function IngredientsPage() {
       </section>
 
       <section className="space-y-4">
-        {/* Tìm kiếm */}
-        <div className="relative">
-          <Search
-            size={19}
-            className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-          />
-
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm tên hoặc danh mục nguyên liệu..."
-            aria-label="Tìm nguyên liệu"
-            className="w-full rounded-2xl border border-beige bg-white py-3.5 pr-4 pl-11 text-sm text-ink outline-none transition placeholder:text-muted/80 focus:border-forest"
-          />
-        </div>
+        {/* Tìm kiếm và lọc danh mục */}
+        <PageFilters
+          search={{
+            value: search,
+            onChange: setSearch,
+            placeholder: 'Tìm tên nguyên liệu...',
+            ariaLabel: 'Tìm nguyên liệu',
+          }}
+          selects={[
+            {
+              key: 'ingredient-category',
+              label: 'Lọc theo danh mục nguyên liệu',
+              value: categoryId,
+              onChange: (value) => {
+                setCategoryId(value)
+                setPage(1)
+              },
+              options: [
+                { label: 'Tất cả danh mục', value: 'all' },
+                ...categories.map((category) => ({
+                  label: category.name,
+                  value: String(category.id),
+                })),
+              ],
+            },
+          ]}
+        />
 
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="text-sm font-semibold text-ink">
             Danh sách nguyên liệu
           </h2>
 
-          <p className="text-sm text-muted">
-            {loading
-              ? 'Đang tải...'
-              : `${ingredients.length} / ${totalItems} nguyên liệu`}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted">
+              {loading
+                ? 'Đang tải...'
+                : `${ingredients.length} / ${totalItems} nguyên liệu`}
+            </p>
+
+          </div>
         </div>
 
+        {/* Lỗi cập nhật trạng thái */}
         {statusError && (
           <div
             role="alert"
             className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           >
             <p>{statusError}</p>
+
             <button
               type="button"
               onClick={() => setStatusError(null)}
@@ -315,6 +344,7 @@ export default function IngredientsPage() {
           </div>
         )}
 
+        {/* Trạng thái danh sách */}
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted">
             <LoaderCircle size={18} className="animate-spin" />
@@ -326,6 +356,7 @@ export default function IngredientsPage() {
             className="rounded-2xl border border-red-200 bg-white p-6 text-center"
           >
             <p className="text-sm text-red-600">{error}</p>
+
             <button
               type="button"
               onClick={() => setRefreshKey((current) => current + 1)}
@@ -339,28 +370,24 @@ export default function IngredientsPage() {
             <Search size={28} className="mx-auto text-muted/70" />
 
             <h3 className="mt-4 font-semibold text-ink">
-              {debouncedSearch
+              {hasActiveFilters
                 ? 'Không tìm thấy nguyên liệu'
                 : 'Kho nguyên liệu đang trống'}
             </h3>
 
             <p className="mt-2 text-sm text-muted">
-              {debouncedSearch
-                ? 'Thử từ khóa khác nhé.'
+              {hasActiveFilters
+                ? 'Thử từ khóa khác hoặc chọn danh mục khác nhé.'
                 : 'Thêm nguyên liệu đầu tiên để sử dụng cho các món ăn.'}
             </p>
 
-            {debouncedSearch ? (
+            {hasActiveFilters ? (
               <button
                 type="button"
-                onClick={() => {
-                  setSearch('')
-                  setDebouncedSearch('')
-                  setPage(1)
-                }}
+                onClick={clearFilters}
                 className="mt-4 text-sm font-semibold text-forest hover:underline"
               >
-                Xóa tìm kiếm
+                Xóa bộ lọc
               </button>
             ) : (
               <button
@@ -406,15 +433,19 @@ export default function IngredientsPage() {
 
                   <span
                     className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium sm:hidden ${ingredient.is_active
-                      ? 'bg-sage/60 text-forest'
-                      : 'bg-gray-100 text-gray-500'
+                        ? 'bg-sage/60 text-forest'
+                        : 'bg-gray-100 text-gray-500'
                       }`}
                   >
                     <span
-                      className={`size-1.5 rounded-full ${ingredient.is_active ? 'bg-forest' : 'bg-gray-400'
+                      className={`size-1.5 rounded-full ${ingredient.is_active
+                          ? 'bg-forest'
+                          : 'bg-gray-400'
                         }`}
                     />
-                    {ingredient.is_active ? 'Đang hoạt động' : 'Ngừng sử dụng'}
+                    {ingredient.is_active
+                      ? 'Đang hoạt động'
+                      : 'Ngừng sử dụng'}
                   </span>
                 </div>
 
@@ -436,7 +467,6 @@ export default function IngredientsPage() {
                   >
                     <Pencil size={16} />
                   </button>
-
 
                   <button
                     type="button"
@@ -465,7 +495,6 @@ export default function IngredientsPage() {
                       <ToggleLeft size={25} strokeWidth={2} />
                     )}
                   </button>
-
                 </div>
               </article>
             ))}
@@ -488,8 +517,8 @@ export default function IngredientsPage() {
                 aria-label="Số nguyên liệu mỗi trang"
               >
                 <option value={10}>10</option>
+                <option value={15}>15</option>
                 <option value={20}>20</option>
-                <option value={50}>50</option>
               </select>
 
               <span>mỗi trang</span>

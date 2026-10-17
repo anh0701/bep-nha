@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 
 import {
@@ -5,8 +6,6 @@ import {
   ChevronRight,
   Pencil,
   Plus,
-  Search,
-  SlidersHorizontal,
   Trash2,
   Utensils,
   X,
@@ -21,10 +20,10 @@ import { getCategories } from '../services/category.service'
 import type { Dish } from '../types/dish'
 import type { Category } from '../types/category'
 
-import CategorySelect from '../components/CategorySelect'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import DishFormModal from '../components/DishFormModal'
 import DishDetailModal from '../components/DishDetailModal'
+import PageFilters from '../components/PageFilters'
 
 export default function DishesPage() {
   const [dishes, setDishes] = useState<Dish[]>([])
@@ -97,8 +96,10 @@ export default function DishesPage() {
         if (cancelled) return
 
         // Nếu trang hiện tại không còn hợp lệ, quay về trang cuối.
-        if (result.pagination.totalPages > 0 &&
-            page > result.pagination.totalPages) {
+        if (
+          result.pagination.totalPages > 0 &&
+          page > result.pagination.totalPages
+        ) {
           setPage(result.pagination.totalPages)
           return
         }
@@ -176,6 +177,12 @@ export default function DishesPage() {
     }
   }
 
+  function clearFilters() {
+    setSearch('')
+    setSelectedCategory('all')
+    setPage(1)
+  }
+
   function handleSearchChange(value: string) {
     setSearch(value)
     setPage(1)
@@ -210,15 +217,6 @@ export default function DishesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* <div className="rounded-2xl bg-sage/60 px-4 py-3">
-            <p className="text-xs text-muted">
-              Tổng số món đang hoạt động
-            </p>
-            <p className="text-xl font-bold text-forest">
-              {loading ? '—' : totalItems}
-            </p>
-          </div> */}
-
           <button
             type="button"
             onClick={openCreateForm}
@@ -232,64 +230,39 @@ export default function DishesPage() {
       </section>
 
       <section className="space-y-4">
-        <div className="relative">
-          <Search
-            size={19}
-            className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
-          />
+        <PageFilters
+          search={{
+            value: search,
+            onChange: handleSearchChange,
+            placeholder: 'Tìm món ăn theo tên...',
+            ariaLabel: 'Tìm món ăn theo tên',
+          }}
+          selects={[
+            {
+              key: 'dish-category',
+              label: 'Lọc theo danh mục món ăn',
+              value: selectedCategory,
+              onChange: handleCategoryChange,
+              options: [
+                { label: 'Tất cả danh mục', value: 'all' },
+                ...categories.map((category) => ({
+                  label: category.name,
+                  value: String(category.id),
+                })),
+              ],
+            },
+          ]}
+        />
 
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder="Tìm món ăn theo tên..."
-            aria-label="Tìm món ăn theo tên"
-            className="w-full rounded-2xl border border-beige bg-white py-3.5 pr-4 pl-11 text-sm text-ink outline-none transition placeholder:text-muted/80 focus:border-forest"
-          />
-        </div>
+        {/* Tiêu đề danh sách và số lượng */}
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <h2 className="text-sm font-semibold text-ink">
+            Danh sách món ăn
+          </h2>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex shrink-0 items-center gap-2 text-sm font-medium text-muted">
-            <SlidersHorizontal size={17} />
-            Lọc danh mục
-          </div>
-
-          <div className="w-full sm:w-75">
-            <CategorySelect
-              categories={categories}
-              value={selectedCategory}
-              onChange={handleCategoryChange}
-              includeAll
-              allLabel="Tất cả danh mục"
-              ariaLabel="Lọc theo danh mục"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 sm:ml-auto">
-            <label
-              htmlFor="dish-page-limit"
-              className="whitespace-nowrap text-sm text-muted"
-            >
-              Hiển thị
-            </label>
-
-            <select
-              id="dish-page-limit"
-              value={limit}
-              onChange={(event) => handleLimitChange(event.target.value)}
-              className="rounded-xl border border-beige bg-white px-3 py-2 text-sm text-ink outline-none focus:border-forest"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-
-            <span className="whitespace-nowrap text-sm text-muted">
-              {loading
-                ? 'Đang tải...'
-                : `${dishes.length} / ${totalItems} món`}
-            </span>
-          </div>
+          <p className="text-sm text-muted">
+            {loading ? 'Đang tải...' : `${dishes.length} / ${totalItems} món ăn`}
+          </p>
         </div>
       </section>
 
@@ -345,11 +318,7 @@ export default function DishesPage() {
 
             <button
               type="button"
-              onClick={() => {
-                setSearch('')
-                setSelectedCategory('all')
-                setPage(1)
-              }}
+              onClick={clearFilters}
               className="mt-4 text-sm font-semibold text-forest hover:underline"
             >
               Xóa bộ lọc
@@ -428,35 +397,61 @@ export default function DishesPage() {
               ))}
             </div>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted">
-                Trang {page} / {Math.max(totalPages, 1)}
-                <span className="mx-2">·</span>
-                Tổng {totalItems} món
-              </p>
+            {/* Điều khiển phân trang */}
+            {totalItems > 0 && (
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <span>Hiển thị</span>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => current - 1)}
-                  disabled={page <= 1 || loading}
-                  className="inline-flex items-center gap-1 rounded-xl border border-beige px-3 py-2 text-sm font-medium text-ink transition hover:bg-sage/40 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft size={16} />
-                  Trang trước
-                </button>
+                  <select
+                    value={limit}
+                    onChange={(event) => handleLimitChange(event.target.value)}
+                    className="rounded-lg border border-beige bg-white px-2 py-1.5 text-sm text-ink outline-none focus:border-forest"
+                    aria-label="Số món ăn mỗi trang"
+                  >
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                  </select>
 
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={page >= totalPages || loading}
-                  className="inline-flex items-center gap-1 rounded-xl border border-beige px-3 py-2 text-sm font-medium text-ink transition hover:bg-sage/40 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Trang sau
-                  <ChevronRight size={16} />
-                </button>
+                  <span>mỗi trang</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <span className="text-sm text-muted">
+                    Trang {page} / {Math.max(totalPages, 1)}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPage((current) => Math.max(1, current - 1))
+                      }
+                      disabled={page <= 1 || loading}
+                      className="inline-flex items-center gap-1 rounded-lg border border-beige bg-white px-3 py-2 text-sm font-medium text-ink transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronLeft size={16} />
+                      Trước
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPage((current) =>
+                          Math.min(Math.max(totalPages, 1), current + 1),
+                        )
+                      }
+                      disabled={page >= totalPages || loading}
+                      className="inline-flex items-center gap-1 rounded-lg border border-beige bg-white px-3 py-2 text-sm font-medium text-ink transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Sau
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </section>
