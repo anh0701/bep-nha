@@ -1,4 +1,4 @@
-stt,name,category
+STT,Món ăn,Phân loại
 1,Canh bí đỏ nấu xương,Canh
 2,Canh khoai sọ nấu xương,Canh
 3,Canh rau ngót nấu sườn,Canh
@@ -141,3 +141,53 @@ stt,name,category
 140,Thịt băm xào giá,Món mặn
 141,Thịt băm xào hành tây,Món mặn
 142,Thịt băm xào ngô ngọt,Món mặn
+143,Bánh mì que,Món khác
+144,Cơm rang dưa bò,Món khác
+145,Cơm rang thập cẩm,Món khác
+146,Bún cá cay,Bún/phở/miến/mì
+147,Bún ngan,Bún/phở/miến/mì
+148,Dưa bắp cải,Dưa chua
+149,Nem cua bể,Món mặn
+150,Bún vịt quay,Bún/phở/miến/mì
+151,Bánh mì thịt heo quay,Bánh mì
+152,Bánh mì trứng lá ngải,Bánh mì
+153,Bánh mì thịt,Bánh mì
+154,Mì cay,Bún/phở/miến/mì
+155,Nem rán,Món mặn
+156,Nem chua rán,Món khác
+157,Dưa cải bẹ,Dưa chua
+158,Dưa góp,Dưa chua
+159,Cà pháo muối,Dưa chua
+160,Kim chi,Dưa chua
+161,Củ cải muối chua ngọt,Dưa chua
+162,Cá rán,Món mặn
+163,Thịt rán,Món mặn
+164,Mực hấp hành,Món mặn
+165,Mực xào chua ngọt,Món mặn
+166,Mực chiên,Món mặn
+167,Tôm rang,Món mặn
+168,Tôm lăn bột chiên xù,Món mặn
+169,Cháo tôm,Cháo
+170,Tép khô rang lá chanh,Canh
+171,Bí xanh xào tép khô,Canh
+172,Canh bầu/bí nấu tép khô,Canh
+173,Thịt ba chỉ chiên giòn,Món mặn
+174,Lòng xào dưa,Món mặn
+175,Thịt lợn luộc,Món mặn
+176,Thịt lợn xào xả ớt,Món mặn
+177,Thịt xào cà chua trứng,Món mặn
+178,Mướp đắng xào trứng,
+179,Gỏi cuốn,
+180,Bún bò Huế,
+181,Ốc nấu chuối đậu,
+182,Súp cua,
+183,Bánh xèo,
+184,Bún mọc dọc mùng,
+185,Bánh bèo,
+186,Bánh bột lọc,
+187,Bánh canh,
+188,Bò kho,
+189,Bò sốt vang,
+190,Lặc lè xào thịt bò,
+191,Lặc lè xào trứng,
+192,Lặc lè xào tỏi
