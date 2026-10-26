@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
   ChefHat,
-  CircleCheck,
   CookingPot,
   LoaderCircle,
   Search,
@@ -21,6 +20,10 @@ import SelectedIngredients from '../components/ingredient-search/SelectedIngredi
 import DishSearchResults, {
   type ResultFilter,
 } from '../components/ingredient-search/DishSearchResults'
+
+import IngredientRecognition, {
+  type RecognitionItem,
+} from '../components/ingredient-search/IngredientRecognition'
 
 export default function IngredientSearchPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -164,6 +167,104 @@ export default function IngredientSearchPage() {
     invalidateResults()
   }
 
+  // Thêm nguyên liệu AI vào cùng danh sách với nguyên liệu chọn thủ công.
+  async function handleAddRecognizedIngredients(
+    items: RecognitionItem[],
+  ) {
+    const matchedItems = items.filter(
+      (item) =>
+        item.matched &&
+        item.ingredient_id !== null &&
+        Boolean(item.ingredient_name),
+    )
+
+    if (matchedItems.length === 0) return
+
+    try {
+      const resolvedIngredients = await Promise.all(
+        matchedItems.map(async (item): Promise<Ingredient> => {
+          const id = String(item.ingredient_id)
+
+          // Nếu đã có trong danh sách được chọn, tái sử dụng đối tượng.
+          const existing = selectedIngredientsMap.get(id)
+          if (existing) return existing
+
+          // Lấy đầy đủ thông tin nguyên liệu từ API hiện tại.
+          try {
+            const response = await getIngredientsPaginated({
+              page: 1,
+              limit: 20,
+              search: item.ingredient_name ?? '',
+            })
+
+            const ingredient = response.data.find(
+              (candidate) =>
+                candidate.id === id && candidate.is_active,
+            )
+
+            if (ingredient) return ingredient
+          } catch (error) {
+            console.error(
+              'Không thể tải thông tin nguyên liệu AI:',
+              error,
+            )
+          }
+
+          // Dự phòng nếu API tìm kiếm không trả về đối tượng đầy đủ.
+          // ID và tên vẫn lấy từ API ánh xạ label, không tự tạo ID.
+          return {
+            id,
+            name: item.ingredient_name!,
+            ingredient_category_id: '',
+            ingredient_category_name: '',
+            default_unit_id: '',
+            default_unit: '',
+            is_active: true,
+            is_allergen: false,
+          }
+        }),
+      )
+
+      // Loại trùng theo ID, tránh thêm một nguyên liệu nhiều lần.
+      const uniqueIngredients = [
+        ...new Map(
+          resolvedIngredients.map((ingredient) => [
+            ingredient.id,
+            ingredient,
+          ]),
+        ).values(),
+      ]
+
+      setSelectedIds((current) => [
+        ...new Set([
+          ...current,
+          ...uniqueIngredients.map((ingredient) => ingredient.id),
+        ]),
+      ])
+
+      setSelectedIngredientsMap((current) => {
+        const next = new Map(current)
+
+        for (const ingredient of uniqueIngredients) {
+          if (!next.has(ingredient.id)) {
+            next.set(ingredient.id, ingredient)
+          }
+        }
+
+        return next
+      })
+
+      setSearchError(null)
+      invalidateResults()
+    } catch (error) {
+      console.error('Failed to add recognized ingredients:', error)
+
+      setSearchError(
+        'Không thể thêm nguyên liệu nhận diện. Vui lòng thử lại.',
+      )
+    }
+  }
+
   async function handleSearch() {
     if (selectedIds.length === 0) {
       setSearchError(
@@ -220,8 +321,9 @@ export default function IngredientSearchPage() {
         </h1>
 
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-          Chọn nguyên liệu bạn đang có. Bếp Nhà sẽ tìm những món phù hợp,
-          ưu tiên món có thể nấu ngay và gợi ý những gì bạn còn thiếu.
+          Chọn nguyên liệu bạn đang có hoặc tải ảnh để AI nhận diện.
+          Bếp Nhà sẽ tìm những món phù hợp, ưu tiên món có thể nấu ngay
+          và gợi ý những gì bạn còn thiếu.
         </p>
       </header>
 
@@ -246,13 +348,23 @@ export default function IngredientSearchPage() {
               Nguyên liệu bạn đang có
             </h2>
             <p className="mt-1 text-sm leading-5 text-muted">
-              Tìm và chọn nhiều nguyên liệu để có gợi ý sát với thực tế hơn.
+              Chọn thủ công hoặc nhận diện từ ảnh, sau đó kiểm tra danh sách
+              trước khi tìm món.
             </p>
           </div>
 
           <span className="shrink-0 rounded-full bg-cream px-3 py-1.5 text-xs font-semibold text-forest">
             {selectedIds.length} đã chọn
           </span>
+        </div>
+
+        <div className="mt-5">
+          <IngredientRecognition
+            selectedIds={selectedIds}
+            onAddIngredients={(items) => {
+              void handleAddRecognizedIngredients(items)
+            }}
+          />
         </div>
 
         <IngredientPicker
@@ -329,9 +441,9 @@ export default function IngredientSearchPage() {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-muted">
-              Chọn nguyên liệu trong bếp, rồi để Bếp Nhà giúp bạn tìm món
-              phù hợp. Bạn không nhất thiết phải có đủ mọi nguyên liệu ngay
-              từ đầu.
+              Chọn nguyên liệu trong bếp hoặc dùng AI nhận diện từ ảnh,
+              rồi để Bếp Nhà giúp bạn tìm món phù hợp. Bạn không nhất thiết
+              phải có đủ mọi nguyên liệu ngay từ đầu.
             </p>
           </div>
         </section>
