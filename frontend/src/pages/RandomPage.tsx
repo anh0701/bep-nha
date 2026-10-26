@@ -8,7 +8,7 @@ import {
     Utensils,
 } from 'lucide-react'
 
-import { getDishes, randomizeDishes } from '../services/dish.service'
+import { getDishesPaginated, randomizeDishes } from '../services/dish.service'
 import type { Dish } from '../types/dish'
 import type {
     RandomDish,
@@ -80,20 +80,56 @@ export default function RandomPage() {
     }, [result])
 
     useEffect(() => {
+        let cancelled = false
+
         async function loadDishes() {
             try {
+                setLoadingDishes(true)
                 setDishError(null)
-                const response = await getDishes()
-                setDishes(response.data)
+
+                const limit = 100
+                const firstResponse = await getDishesPaginated({
+                    page: 1,
+                    limit,
+                })
+
+                const allDishes = [...firstResponse.data]
+                const totalPages = firstResponse.pagination.totalPages
+
+                for (let page = 2; page <= totalPages; page++) {
+                    const response = await getDishesPaginated({
+                        page,
+                        limit,
+                    })
+
+                    allDishes.push(...response.data)
+                }
+
+                if (!cancelled) {
+                    setDishes(
+                        allDishes.filter((dish) => dish.is_active),
+                    )
+                }
             } catch (error) {
                 console.error('Failed to load dishes:', error)
-                setDishError('Không thể tải kho món ăn. Vui lòng thử lại.')
+
+                if (!cancelled) {
+                    setDishError(
+                        'Không thể tải kho món ăn. Vui lòng thử lại.',
+                    )
+                }
             } finally {
-                setLoadingDishes(false)
+                if (!cancelled) {
+                    setLoadingDishes(false)
+                }
             }
         }
 
         void loadDishes()
+
+        return () => {
+            cancelled = true
+        }
     }, [])
 
     const categories = useMemo(() => {

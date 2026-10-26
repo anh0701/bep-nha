@@ -1,9 +1,12 @@
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, X } from 'lucide-react'
+import { LoaderCircle, Search, X } from 'lucide-react'
 
 import type { Dish } from '../types/dish'
+import {
+    getDishById,
+    getDishesPaginated,
+} from '../services/dish.service'
 
 interface DishMultiSelectProps {
     dishes: Dish[]
@@ -39,31 +42,157 @@ export default function DishMultiSelect({
 }: DishMultiSelectProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [isFocused, setIsFocused] = useState(false)
-    const [position, setPosition] = useState<DropdownPosition | null>(null)
+    const [position, setPosition] =
+        useState<DropdownPosition | null>(null)
+
+    const [searchResults, setSearchResults] = useState<Dish[]>([])
+    const [dishCache, setDishCache] = useState<Record<string, Dish>>({})
+    const [isSearching, setIsSearching] = useState(false)
+    const [searchError, setSearchError] = useState('')
 
     const containerRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const showDropdown = isFocused && !disabled
+    const keyword = searchTerm.trim()
+
+    useEffect(() => {
+        setDishCache((previous) => {
+            const next = { ...previous }
+            let changed = false
+
+            for (const dish of dishes) {
+                if (next[dish.id] !== dish) {
+                    next[dish.id] = dish
+                    changed = true
+                }
+            }
+
+            return changed ? next : previous
+        })
+    }, [dishes])
+
+    useEffect(() => {
+        let cancelled = false
+
+        if (!keyword) {
+            setSearchResults([])
+            setIsSearching(false)
+            setSearchError('')
+            return
+        }
+
+        const timer = window.setTimeout(async () => {
+            setIsSearching(true)
+            setSearchError('')
+
+            try {
+                const response = await getDishesPaginated({
+                    page: 1,
+                    limit: 30,
+                    search: keyword,
+                })
+
+                if (cancelled) return
+
+                const results = response.data.filter(
+                    (dish) => dish.is_active,
+                )
+
+                setSearchResults(results)
+
+                setDishCache((previous) => {
+                    const next = { ...previous }
+
+                    for (const dish of results) {
+                        next[dish.id] = dish
+                    }
+
+                    return next
+                })
+            } catch {
+                if (!cancelled) {
+                    setSearchResults([])
+                    setSearchError(
+                        'Không thể tìm kiếm món ăn. Vui lòng thử lại.',
+                    )
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsSearching(false)
+                }
+            }
+        }, 250)
+
+        return () => {
+            cancelled = true
+            window.clearTimeout(timer)
+        }
+    }, [keyword])
+
+    useEffect(() => {
+        let cancelled = false
+
+        const missingIds = value.filter(
+            (id) => !dishCache[id],
+        )
+
+        if (missingIds.length === 0) return
+
+        const loadSelectedDishes = async () => {
+            const results = await Promise.all(
+                missingIds.map(async (id) => {
+                    try {
+                        return await getDishById(id)
+                    } catch {
+                        return null
+                    }
+                }),
+            )
+
+            if (cancelled) return
+
+            setDishCache((previous) => {
+                const next = { ...previous }
+
+                for (const dish of results) {
+                    if (dish) {
+                        next[dish.id] = dish
+                    }
+                }
+
+                return next
+            })
+        }
+
+        void loadSelectedDishes()
+
+        return () => {
+            cancelled = true
+        }
+    }, [value, dishCache])
 
     const selectedDishes = useMemo(
         () =>
             value
-                .map((id) => dishes.find((dish) => dish.id === id))
+                .map((id) => dishCache[id])
                 .filter((dish): dish is Dish => Boolean(dish)),
-        [dishes, value],
+        [dishCache, value],
     )
 
     const filteredDishes = useMemo(() => {
-        const keyword = normalizeText(searchTerm.trim())
+        const normalizedKeyword = normalizeText(keyword)
 
-        if (!keyword) return []
+        if (!normalizedKeyword) return []
 
-        return dishes
-            .filter((dish) => normalizeText(dish.name).includes(keyword))
+        return searchResults
+            .filter((dish) => dish.is_active)
+            .filter((dish) =>
+                normalizeText(dish.name).includes(normalizedKeyword),
+            )
             .slice(0, 30)
-    }, [dishes, searchTerm])
+    }, [searchResults, keyword])
 
     const isForest = variant === 'forest'
 
@@ -100,9 +229,11 @@ export default function DishMultiSelect({
 
             const rect = element.getBoundingClientRect()
             const gap = 6
-            const bottomSpace = window.innerHeight - rect.bottom - gap
+            const bottomSpace =
+                window.innerHeight - rect.bottom - gap
             const topSpace = rect.top - gap
-            const openAbove = bottomSpace < 200 && topSpace > bottomSpace
+            const openAbove =
+                bottomSpace < 200 && topSpace > bottomSpace
 
             const maxHeight = Math.max(
                 100,
@@ -128,7 +259,13 @@ export default function DishMultiSelect({
             window.removeEventListener('resize', updatePosition)
             window.removeEventListener('scroll', updatePosition, true)
         }
-    }, [showDropdown, searchTerm, filteredDishes.length, selectedDishes.length])
+    }, [
+        showDropdown,
+        searchTerm,
+        filteredDishes.length,
+        selectedDishes.length,
+        isSearching,
+    ])
 
     useEffect(() => {
         if (!showDropdown) return
@@ -195,13 +332,25 @@ export default function DishMultiSelect({
                 ))}
 
                 <div className="flex min-w-[120px] flex-1 items-center gap-1.5">
-                    <Search size={15} className="shrink-0 text-stone-400" />
+                    {isSearching ? (
+                        <LoaderCircle
+                            size={15}
+                            className="shrink-0 animate-spin text-stone-400"
+                        />
+                    ) : (
+                        <Search
+                            size={15}
+                            className="shrink-0 text-stone-400"
+                        />
+                    )}
 
                     <input
                         ref={inputRef}
                         value={searchTerm}
                         onFocus={() => setIsFocused(true)}
-                        onChange={(event) => setSearchTerm(event.target.value)}
+                        onChange={(event) =>
+                            setSearchTerm(event.target.value)
+                        }
                         onKeyDown={(event) => {
                             if (
                                 event.key === 'Backspace' &&
@@ -217,7 +366,9 @@ export default function DishMultiSelect({
                             }
                         }}
                         placeholder={
-                            value.length > 0 ? 'Thêm món...' : placeholder
+                            value.length > 0
+                                ? 'Thêm món...'
+                                : placeholder
                         }
                         disabled={disabled}
                         autoComplete="off"
@@ -241,9 +392,24 @@ export default function DishMultiSelect({
                         }}
                         className={`overflow-y-auto rounded-xl border ${styles.border} bg-white py-1 shadow-lg`}
                     >
-                        {!searchTerm.trim() ? (
+                        {!keyword ? (
                             <p className="px-3 py-3 text-sm text-muted">
-                                Type to search dishes...
+                                Nhập tên món để tìm kiếm...
+                            </p>
+                        ) : isSearching ? (
+                            <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted">
+                                <LoaderCircle
+                                    size={15}
+                                    className="animate-spin"
+                                />
+                                Đang tìm món ăn...
+                            </div>
+                        ) : searchError ? (
+                            <p
+                                role="alert"
+                                className="px-3 py-3 text-sm text-red-600"
+                            >
+                                {searchError}
                             </p>
                         ) : (
                             <>

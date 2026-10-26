@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 
 import {
   ChevronLeft,
@@ -26,6 +27,27 @@ import DishDetailModal from '../components/DishDetailModal'
 import PageFilters from '../components/PageFilters'
 
 export default function DishesPage() {
+
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const state = location.state as
+      | { openCreateForm?: boolean }
+      | null
+
+    if (state?.openCreateForm) {
+      setEditingDish(null)
+      setShowCreateForm(true)
+
+      // Xóa state để không tự mở lại form khi quay lại trang.
+      navigate(location.pathname, {
+        replace: true,
+        state: null,
+      })
+    }
+  }, [location, navigate])
+
   const [dishes, setDishes] = useState<Dish[]>([])
   const [categories, setCategories] = useState<Category[]>([])
 

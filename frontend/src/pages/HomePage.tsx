@@ -247,9 +247,11 @@ export default function HomePage() {
         <button
           type="button"
           className="rounded-xl border border-beige px-4 py-2.5 text-sm font-semibold text-forest hover:bg-sage/50"
-          onClick={() => {
-            window.alert('Form thêm món ăn sẽ được triển khai trong trang Kho món ăn.')
-          }}
+          onClick={() =>
+            navigate('/dishes', {
+              state: { openCreateForm: true },
+            })
+          }
         >
           Thêm món
         </button>
