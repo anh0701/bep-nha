@@ -596,6 +596,65 @@ CREATE INDEX idx_ai_ingredient_labels_ingredient_id
 CREATE INDEX idx_ai_ingredient_labels_active
     ON ai_ingredient_labels(model_name, is_active);
 
+--
+-- Cho phép label chưa ánh xạ nguyên liệu
+ALTER TABLE ai_ingredient_labels
+ALTER COLUMN ingredient_id DROP NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_ingredient_labels_model_label
+ON ai_ingredient_labels (model_name, LOWER(label));
+
+INSERT INTO ai_ingredient_labels (model_name, label, ingredient_id)
+VALUES
+    ('bep-nha-ingredients', 'banana', NULL),
+    ('bep-nha-ingredients', 'beef', 173),
+    ('bep-nha-ingredients', 'black_pepper', 185),
+    ('bep-nha-ingredients', 'bottle_gourd', 34),
+    ('bep-nha-ingredients', 'carp', 58),
+    ('bep-nha-ingredients', 'carrot', 54),
+    ('bep-nha-ingredients', 'chicken', 176),
+    ('bep-nha-ingredients', 'chicken_breast', 223),
+    ('bep-nha-ingredients', 'chicken_egg', 187),
+    ('bep-nha-ingredients', 'chicken_leg', 207),
+    ('bep-nha-ingredients', 'chicken_wing', 71),
+    ('bep-nha-ingredients', 'cinnamon', NULL),
+    ('bep-nha-ingredients', 'cooking_oil', 83),
+    ('bep-nha-ingredients', 'drumstick', NULL),
+    ('bep-nha-ingredients', 'duck', 182),
+    ('bep-nha-ingredients', 'eggplant', 55),
+    ('bep-nha-ingredients', 'field_crab', 52),
+    ('bep-nha-ingredients', 'fresh_chili', 222),
+    ('bep-nha-ingredients', 'garlic', 197),
+    ('bep-nha-ingredients', 'ginger', 94),
+    ('bep-nha-ingredients', 'green_onion', 95),
+    ('bep-nha-ingredients', 'ground_beef', 174),
+    ('bep-nha-ingredients', 'ground_pork', 178),
+    ('bep-nha-ingredients', 'guava', NULL),
+    ('bep-nha-ingredients', 'lemon', 47),
+    ('bep-nha-ingredients', 'lemongrass', 165),
+    ('bep-nha-ingredients', 'okra', 210),
+    ('bep-nha-ingredients', 'onion', 97),
+    ('bep-nha-ingredients', 'orange', NULL),
+    ('bep-nha-ingredients', 'pork_belly', 172),
+    ('bep-nha-ingredients', 'pumpkin', 28),
+    ('bep-nha-ingredients', 'red_apple', NULL),
+    ('bep-nha-ingredients', 'rice_noodle', 30),
+    ('bep-nha-ingredients', 'shallot', 98),
+    ('bep-nha-ingredients', 'star_anise', NULL),
+    ('bep-nha-ingredients', 'tilapia', 66),
+    ('bep-nha-ingredients', 'tofu', 213),
+    ('bep-nha-ingredients', 'tomato', 53),
+    ('bep-nha-ingredients', 'turmeric', 130),
+    ('bep-nha-ingredients', 'white_pepper', 184),
+    ('bep-nha-ingredients', 'winter_melon', 27),
+    ('bep-nha-ingredients', 'zucchini', NULL),
+    ('bep-nha-ingredients', 'bep-nha-ingredients', NULL)
+ON CONFLICT (model_name, LOWER(label))
+DO UPDATE SET
+    ingredient_id = EXCLUDED.ingredient_id,
+    is_active = TRUE,
+    updated_at = NOW();
+
 
 
 

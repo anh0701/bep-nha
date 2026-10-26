@@ -275,3 +275,18 @@ GET {{baseUrl}}/api/by-ingredients?ids=1,3,16
 
 ###
 GET {{baseUrl}}/api/units
+
+### API laays teen cuar label
+POST {{baseUrl}}/api/ingredient-labels/resolve
+Accept: application/json
+Content-Type: application/json
+
+{
+  "model_name": "bep-nha-ingredients",
+  "labels": [
+    "beef",
+    "green_onion",
+    "chicken_breast",
+    "unknown_label"
+  ]
+}

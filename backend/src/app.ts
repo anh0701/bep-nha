@@ -9,6 +9,7 @@ import cookingRoutes from './routes/cooking.routes.js'
 import statisticsRouter from './routes/statistics.routes.js'
 import ingredientRoutes from './routes/ingredient.routes.js'
 import ingredientCategoryRoutes from './routes/ingredient-category.routes.js'
+import ingredientLabelRoutes from "./routes/ingredient-label.routes.js";
 
 const app = express()
 
@@ -27,5 +28,6 @@ app.use('/api', cookingRoutes)
 app.use('/api/statistics', statisticsRouter)
 app.use('/api', ingredientRoutes)
 app.use('/api/ingredient-categories', ingredientCategoryRoutes)
+app.use("/api/ingredient-labels", ingredientLabelRoutes);
 
 export default app

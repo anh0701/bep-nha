@@ -173,6 +173,29 @@ CREATE TABLE public.menu_dishes (
 CREATE INDEX idx_menu_dishes_dish_id ON public.menu_dishes USING btree (dish_id);
 
 
+-- public.ai_ingredient_labels definition
+
+-- Drop table
+
+-- DROP TABLE public.ai_ingredient_labels;
+
+CREATE TABLE public.ai_ingredient_labels (
+	id bigserial NOT NULL,
+	"label" varchar(150) NOT NULL,
+	ingredient_id int8 NULL,
+	model_name varchar(150) DEFAULT 'bep-nha-ingredients'::character varying NOT NULL,
+	is_active bool DEFAULT true NOT NULL,
+	created_at timestamptz DEFAULT now() NOT NULL,
+	updated_at timestamptz DEFAULT now() NOT NULL,
+	CONSTRAINT ai_ingredient_labels_pkey PRIMARY KEY (id),
+	CONSTRAINT uq_ai_label_model UNIQUE (model_name, label),
+	CONSTRAINT ai_ingredient_labels_ingredient_id_fkey FOREIGN KEY (ingredient_id) REFERENCES public.ingredients(id) ON DELETE RESTRICT
+);
+CREATE INDEX idx_ai_ingredient_labels_active ON public.ai_ingredient_labels USING btree (model_name, is_active);
+CREATE INDEX idx_ai_ingredient_labels_ingredient_id ON public.ai_ingredient_labels USING btree (ingredient_id);
+CREATE UNIQUE INDEX uq_ai_ingredient_labels_model_label ON public.ai_ingredient_labels USING btree (model_name, lower((label)::text));
+
+
 -- public.allergen_ingredients definition
 
 -- Drop table
