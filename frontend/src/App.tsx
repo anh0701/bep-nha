@@ -13,7 +13,7 @@ import MealPlanDetailPage from './pages/MealPlanDetailPage'
 import StatisticsPage from './pages/StatisticsPage'
 import IngredientsPage from './pages/IngredientsPage'
 import IngredientSearchPage from './pages/IngredientSearchPage'
-import IngredientRecognitionPage from './pages/IngredientRecognition'
+// import IngredientRecognitionPage from './pages/IngredientRecognition'
 
 function AppLayout() {
   return (
@@ -33,7 +33,7 @@ function AppLayout() {
           <Route path="/meal-plan/:id" element={<MealPlanDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
-          <Route path='/vision' element={<IngredientRecognitionPage></IngredientRecognitionPage>}></Route>
+          {/* <Route path='/vision' element={<IngredientRecognitionPage></IngredientRecognitionPage>}></Route> */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
