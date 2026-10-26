@@ -428,6 +428,7 @@ export default function MealPlanDetailPage() {
                                                             category_id: dish.category_id,
                                                             category: dish.category,
                                                             is_active: dish.is_active,
+                                                            meal_role: dish.meal_role,
                                                         })
                                                     }
                 

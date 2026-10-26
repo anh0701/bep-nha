@@ -5,8 +5,20 @@ from io import BytesIO
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from PIL import Image, UnidentifiedImageError
 from ultralytics import YOLO
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Bep Nha AI")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 MODEL_PATH = Path(__file__).parent / "models" / "best.pt"
 
@@ -93,3 +105,13 @@ async def recognize_ingredients(
         "count": len(detections),
         "detections": detections,
     }
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8000,
+        reload=False
+    )

@@ -522,6 +522,7 @@ export default function RandomPage() {
                                                         category_id: dish.category_id,
                                                         category: dish.category,
                                                         is_active: dish.is_active,
+                                                        meal_role: dish.meal_role,
                                                     })
                                                 }
                                                 className="text-left font-semibold text-ink transition hover:text-forest hover:underline focus-visible:outline-none focus-visible:underline"

@@ -11,6 +11,7 @@ export interface DishIngredient {
   ingredient_role: IngredientRole
   is_optional: boolean
   preparation_note: string | null
+  is_allergen: boolean
 }
 
 export interface DishIngredientInput {

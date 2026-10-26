@@ -1,7 +1,6 @@
 
 import {
   ChartNoAxesColumn,
-  ChefHat,
   ChevronRight,
   CookingPot,
   Plus,
@@ -12,7 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { getDishes } from '../services/dish.service'
 import type { Dish } from '../types/dish'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 
 function getShortCategory(category: string) {
   const labels: Record<string, string> = {

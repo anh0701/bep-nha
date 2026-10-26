@@ -32,7 +32,7 @@ export interface DishByIngredients {
   name: string
   category_id: string
   category: string
-  meal_role: 'main' | 'vegetable' | 'soup' | 'one_dish' | 'side'
+  meal_role: MealRole
   total_ingredients: number
   matched_count: number
   missing_count: number

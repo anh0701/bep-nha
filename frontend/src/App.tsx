@@ -13,19 +13,7 @@ import MealPlanDetailPage from './pages/MealPlanDetailPage'
 import StatisticsPage from './pages/StatisticsPage'
 import IngredientsPage from './pages/IngredientsPage'
 import IngredientSearchPage from './pages/IngredientSearchPage'
-
-function ComingSoonPage() {
-  return (
-    <div className="mx-auto max-w-6xl px-5 py-10 md:px-10">
-      <h1 className="text-2xl font-bold text-ink">
-        Chức năng đang được phát triển
-      </h1>
-      <p className="mt-2 text-sm text-muted">
-        Trang này sẽ được triển khai trong các phiên bản tiếp theo.
-      </p>
-    </div>
-  )
-}
+import IngredientRecognitionPage from './pages/IngredientRecognition'
 
 function AppLayout() {
   return (
@@ -45,6 +33,7 @@ function AppLayout() {
           <Route path="/meal-plan/:id" element={<MealPlanDetailPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
+          <Route path='/vision' element={<IngredientRecognitionPage></IngredientRecognitionPage>}></Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

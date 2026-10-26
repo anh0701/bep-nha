@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
@@ -16,7 +15,7 @@ import type { Dish, DishByIngredients } from '../types/dish'
 import type { Ingredient } from '../types/ingredient'
 
 import { getDishesByIngredients } from '../services/dish.service'
-import { getIngredients } from '../services/ingredient.service'
+import { getIngredientsPaginated } from '../services/ingredient.service'
 import DishDetailModal from '../components/DishDetailModal'
 
 type ResultFilter = 'all' | 'ready' | 'missing'
@@ -24,6 +23,11 @@ type ResultFilter = 'all' | 'ready' | 'missing'
 export default function IngredientSearchPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // Lưu thông tin các nguyên liệu đã chọn độc lập với kết quả tìm kiếm.
+  const [selectedIngredientsMap, setSelectedIngredientsMap] =
+    useState<Map<string, Ingredient>>(new Map())
+
   const [search, setSearch] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
 
@@ -39,28 +43,48 @@ export default function IngredientSearchPage() {
 
   const pickerRef = useRef<HTMLDivElement | null>(null)
 
+  // Tìm nguyên liệu qua API, debounce 300 ms.
   useEffect(() => {
-    async function loadIngredients() {
+    let cancelled = false
+
+    const timer = window.setTimeout(async () => {
       try {
+        setLoadingIngredients(true)
         setIngredientError(null)
-        const response = await getIngredients()
+
+        const response = await getIngredientsPaginated({
+          page: 1,
+          limit: 20,
+          search,
+        })
+
+        if (cancelled) return
 
         setIngredients(
           response.data.filter((ingredient) => ingredient.is_active),
         )
       } catch (error) {
-        console.error('Failed to load ingredients:', error)
+        if (cancelled) return
+
         setIngredientError(
-          'Không thể tải danh sách nguyên liệu. Vui lòng thử lại.',
+          error instanceof Error
+            ? error.message
+            : 'Không thể tải danh sách nguyên liệu',
         )
       } finally {
-        setLoadingIngredients(false)
+        if (!cancelled) {
+          setLoadingIngredients(false)
+        }
       }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
     }
+  }, [search])
 
-    void loadIngredients()
-  }, [])
-
+  // Đóng dropdown khi click bên ngoài.
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
       if (
@@ -78,30 +102,28 @@ export default function IngredientSearchPage() {
     }
   }, [])
 
-  const selectedIngredients = useMemo(() => {
-    const selectedSet = new Set(selectedIds)
+  // Luôn lấy nguyên liệu đã chọn từ Map, không phụ thuộc kết quả tìm kiếm hiện tại.
+  const selectedIngredients = useMemo(
+    () =>
+      selectedIds
+        .map((id) => selectedIngredientsMap.get(id))
+        .filter((ingredient): ingredient is Ingredient => Boolean(ingredient)),
+    [selectedIds, selectedIngredientsMap],
+  )
 
-    return ingredients.filter((ingredient) =>
-      selectedSet.has(ingredient.id),
-    )
-  }, [ingredients, selectedIds])
-
+  // Sắp xếp nguyên liệu đã chọn lên đầu danh sách kết quả hiện tại.
   const filteredIngredients = useMemo(() => {
-    const keyword = search.trim().toLocaleLowerCase('vi')
+    return [...ingredients].sort((a, b) => {
+      const aSelected = selectedIds.includes(a.id)
+      const bSelected = selectedIds.includes(b.id)
 
-    return ingredients
-      .filter((ingredient) =>
-        ingredient.name.toLocaleLowerCase('vi').includes(keyword),
-      )
-      .sort((a, b) => {
-        const aSelected = selectedIds.includes(a.id)
-        const bSelected = selectedIds.includes(b.id)
+      if (aSelected !== bSelected) {
+        return aSelected ? -1 : 1
+      }
 
-        if (aSelected !== bSelected) return aSelected ? -1 : 1
-
-        return a.name.localeCompare(b.name, 'vi')
-      })
-  }, [ingredients, search, selectedIds])
+      return a.name.localeCompare(b.name, 'vi')
+    })
+  }, [ingredients, selectedIds])
 
   const readyCount = useMemo(
     () => results?.filter((dish) => dish.can_cook_now).length ?? 0,
@@ -129,23 +151,52 @@ export default function IngredientSearchPage() {
     setResultFilter('all')
   }
 
+  // Chọn hoặc bỏ chọn nguyên liệu.
   function toggleIngredient(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    )
+    const ingredient = ingredients.find((item) => item.id === id)
+
+    if (!ingredient) return
+
+    const isSelected = selectedIds.includes(id)
+
+    if (isSelected) {
+      setSelectedIds((current) => current.filter((item) => item !== id))
+
+      setSelectedIngredientsMap((current) => {
+        const next = new Map(current)
+        next.delete(id)
+        return next
+      })
+    } else {
+      setSelectedIds((current) =>
+        current.includes(id) ? current : [...current, id],
+      )
+
+      setSelectedIngredientsMap((current) => {
+        const next = new Map(current)
+        next.set(id, ingredient)
+        return next
+      })
+    }
 
     invalidateResults()
   }
 
   function removeIngredient(id: string) {
     setSelectedIds((current) => current.filter((item) => item !== id))
+
+    setSelectedIngredientsMap((current) => {
+      const next = new Map(current)
+      next.delete(id)
+      return next
+    })
+
     invalidateResults()
   }
 
   function clearIngredients() {
     setSelectedIds([])
+    setSelectedIngredientsMap(new Map())
     invalidateResults()
   }
 
@@ -186,6 +237,7 @@ export default function IngredientSearchPage() {
       name: dish.name,
       category_id: dish.category_id,
       category: dish.category,
+      meal_role: dish.meal_role,
       is_active: true,
     })
   }
@@ -194,7 +246,6 @@ export default function IngredientSearchPage() {
     <div className="mx-auto max-w-6xl space-y-8 px-5 py-7 md:px-10 md:py-10">
       <header>
         <div className="inline-flex items-center gap-2 rounded-full bg-sage/50 px-3 py-1.5 text-sm font-medium text-forest">
-          {/* <Sparkles size={15} /> */}
           Gợi ý từ căn bếp của bạn
         </div>
 
@@ -246,12 +297,12 @@ export default function IngredientSearchPage() {
             Tìm nguyên liệu
           </label>
 
-
           <div
-            className={`flex items-center gap-3 rounded-2xl border bg-white px-4 transition ${pickerOpen
-              ? 'border-forest ring-2 ring-sage/60'
-              : 'border-beige hover:border-sage'
-              } focus-within:border-forest focus-within:ring-2 focus-within:ring-sage/60`}
+            className={`flex items-center gap-3 rounded-2xl border bg-white px-4 transition ${
+              pickerOpen
+                ? 'border-forest ring-2 ring-sage/60'
+                : 'border-beige hover:border-sage'
+            } focus-within:border-forest focus-within:ring-2 focus-within:ring-sage/60`}
           >
             <Search size={19} className="shrink-0 text-muted" />
 
@@ -275,9 +326,7 @@ export default function IngredientSearchPage() {
               aria-controls="ingredient-picker-options"
               role="combobox"
               aria-autocomplete="list"
-
               className="min-w-0 flex-1 appearance-none border-0 bg-transparent py-4 text-sm text-ink outline-none ring-0 placeholder:text-muted !outline-none !ring-0 focus:!border-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none"
-
             />
 
             {search && (
@@ -296,11 +345,11 @@ export default function IngredientSearchPage() {
 
             <ChevronDown
               size={18}
-              className={`shrink-0 text-muted transition-transform ${pickerOpen ? 'rotate-180' : ''
-                }`}
+              className={`shrink-0 text-muted transition-transform ${
+                pickerOpen ? 'rotate-180' : ''
+              }`}
             />
           </div>
-
 
           {pickerOpen && (
             <div
@@ -310,7 +359,7 @@ export default function IngredientSearchPage() {
               <div className="flex items-center justify-between border-b border-beige/70 bg-cream/60 px-4 py-3">
                 <span className="text-xs font-semibold text-muted">
                   {loadingIngredients
-                    ? 'Đang tải nguyên liệu'
+                    ? 'Đang cập nhật nguyên liệu'
                     : `${filteredIngredients.length} nguyên liệu`}
                 </span>
 
@@ -326,7 +375,7 @@ export default function IngredientSearchPage() {
               </div>
 
               <div className="max-h-64 overflow-y-auto p-2">
-                {loadingIngredients ? (
+                {filteredIngredients.length === 0 && loadingIngredients ? (
                   <div className="flex items-center justify-center gap-2 p-6 text-sm text-muted">
                     <LoaderCircle size={17} className="animate-spin" />
                     Đang tải danh sách...
@@ -342,47 +391,56 @@ export default function IngredientSearchPage() {
                     </p>
                   </div>
                 ) : (
-                  filteredIngredients.map((ingredient) => {
-                    const checked = selectedIds.includes(ingredient.id)
+                  <>
+                    {loadingIngredients && (
+                      <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted">
+                        <LoaderCircle size={14} className="animate-spin" />
+                        Đang cập nhật kết quả...
+                      </div>
+                    )}
 
-                    return (
-                      <button
-                        key={ingredient.id}
-                        type="button"
-                        role="option"
-                        aria-selected={checked}
-                        onClick={() => toggleIngredient(ingredient.id)}
-                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${checked
-                          ? 'bg-sage/50'
-                          : 'hover:bg-cream'
+                    {filteredIngredients.map((ingredient) => {
+                      const checked = selectedIds.includes(ingredient.id)
+
+                      return (
+                        <button
+                          key={ingredient.id}
+                          type="button"
+                          role="option"
+                          aria-selected={checked}
+                          onClick={() => toggleIngredient(ingredient.id)}
+                          className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+                            checked ? 'bg-sage/50' : 'hover:bg-cream'
                           }`}
-                      >
-                        <span
-                          className={`flex size-5 shrink-0 items-center justify-center rounded-md border transition ${checked
-                            ? 'border-forest bg-forest text-white'
-                            : 'border-beige bg-white'
-                            }`}
                         >
-                          {checked && <Check size={13} strokeWidth={3} />}
-                        </span>
+                          <span
+                            className={`flex size-5 shrink-0 items-center justify-center rounded-md border transition ${
+                              checked
+                                ? 'border-forest bg-forest text-white'
+                                : 'border-beige bg-white'
+                            }`}
+                          >
+                            {checked && <Check size={13} strokeWidth={3} />}
+                          </span>
 
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-ink">
-                            {ingredient.name}
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-ink">
+                              {ingredient.name}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted">
+                              {ingredient.ingredient_category_name}
+                            </span>
                           </span>
-                          <span className="mt-0.5 block text-xs text-muted">
-                            {ingredient.ingredient_category_name}
-                          </span>
-                        </span>
 
-                        {checked && (
-                          <span className="text-xs font-medium text-forest">
-                            Đã chọn
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })
+                          {checked && (
+                            <span className="text-xs font-medium text-forest">
+                              Đã chọn
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </>
                 )}
               </div>
 
@@ -574,10 +632,11 @@ export default function IngredientSearchPage() {
                     type="button"
                     aria-pressed={resultFilter === value}
                     onClick={() => setResultFilter(value)}
-                    className={`rounded-full px-3.5 py-2 text-xs font-semibold transition ${resultFilter === value
-                      ? 'bg-forest text-white'
-                      : 'bg-white text-muted ring-1 ring-beige hover:bg-cream'
-                      }`}
+                    className={`rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+                      resultFilter === value
+                        ? 'bg-forest text-white'
+                        : 'bg-white text-muted ring-1 ring-beige hover:bg-cream'
+                    }`}
                   >
                     {label}
                   </button>
@@ -624,17 +683,17 @@ export default function IngredientSearchPage() {
               {visibleResults.map((dish) => (
                 <article
                   key={dish.id}
-                  className={`flex flex-col rounded-3xl bg-white p-5 ring-1 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 ${dish.can_cook_now
-                    ? 'ring-sage'
-                    : 'ring-beige/80'
-                    }`}
+                  className={`flex flex-col rounded-3xl bg-white p-5 ring-1 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6 ${
+                    dish.can_cook_now ? 'ring-sage' : 'ring-beige/80'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div
-                      className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${dish.can_cook_now
-                        ? 'bg-sage/60 text-forest'
-                        : 'bg-cream text-ink'
-                        }`}
+                      className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${
+                        dish.can_cook_now
+                          ? 'bg-sage/60 text-forest'
+                          : 'bg-cream text-ink'
+                      }`}
                     >
                       {dish.can_cook_now ? (
                         <ChefHat size={22} />
@@ -644,10 +703,11 @@ export default function IngredientSearchPage() {
                     </div>
 
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${dish.can_cook_now
-                        ? 'bg-sage/60 text-forest'
-                        : 'bg-cream text-muted'
-                        }`}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        dish.can_cook_now
+                          ? 'bg-sage/60 text-forest'
+                          : 'bg-cream text-muted'
+                      }`}
                     >
                       {dish.can_cook_now && <CircleCheck size={14} />}
                       {dish.can_cook_now
@@ -665,9 +725,7 @@ export default function IngredientSearchPage() {
                       {dish.name}
                     </button>
 
-                    <p className="mt-1 text-sm text-muted">
-                      {dish.category}
-                    </p>
+                    <p className="mt-1 text-sm text-muted">{dish.category}</p>
                   </div>
 
                   <div className="mt-5">

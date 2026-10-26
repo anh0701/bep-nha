@@ -1,7 +1,7 @@
 from pathlib import Path
 from ultralytics import YOLO
 
-MODEL_NAME = "yolov8n.pt"
+MODEL_NAME = "models/yolov8n.pt"
 CONFIDENCE = 0.35
 
 

@@ -19,6 +19,7 @@ export const navigation = [
   { label: 'Kho nguyên liệu', path: '/ingredients', icon: Package },
   { label: 'Lịch sử nấu', path: '/history', icon: Clock3 },
   { label: 'Thống kê', path: '/statistics', icon: ChartNoAxesColumn },
+  { label: 'Vision', path: '/vision', icon: Clock3},
 ] as const
 
 export const mobileNavigation = [
