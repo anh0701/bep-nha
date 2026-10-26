@@ -571,6 +571,32 @@ FROM public.ingredients;
 ALTER TABLE public.dish_ingredients
 ALTER COLUMN unit DROP NOT NULL;
 
+--
+CREATE TABLE ai_ingredient_labels (
+    id BIGSERIAL PRIMARY KEY,
+
+    label VARCHAR(150) NOT NULL,
+    ingredient_id BIGINT NOT NULL
+        REFERENCES ingredients(id)
+        ON DELETE RESTRICT,
+
+    model_name VARCHAR(150) NOT NULL DEFAULT 'bep-nha-ingredients',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT uq_ai_label_model
+        UNIQUE (model_name, label)
+);
+
+CREATE INDEX idx_ai_ingredient_labels_ingredient_id
+    ON ai_ingredient_labels(ingredient_id);
+
+CREATE INDEX idx_ai_ingredient_labels_active
+    ON ai_ingredient_labels(model_name, is_active);
+
+
 
 
 
