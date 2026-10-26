@@ -421,7 +421,7 @@ export default function StatisticsPage() {
                 onChange={(event) =>
                   setGroupBy(event.target.value as GroupBy)
                 }
-                className="cursor-pointer bg-transparent text-sm font-medium text-[#45634c] outline-none"
+                className="cursor-pointer appearance-none bg-transparent text-sm font-medium text-[#45634c] outline-none"
               >
                 <option value="day">Ngày</option>
                 <option value="week">Tuần</option>
