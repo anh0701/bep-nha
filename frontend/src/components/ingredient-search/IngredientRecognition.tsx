@@ -343,7 +343,7 @@ export default function IngredientRecognition({
 
                         <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs font-medium text-forest">
                             <Sparkles size={12} />
-                            YOLO
+                            v1.0.0-beta.1
                         </span>
                     </div>
 
