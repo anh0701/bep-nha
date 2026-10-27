@@ -147,9 +147,11 @@ export default function IngredientsPage() {
   // Chờ người dùng ngừng gõ 300 ms rồi mới tìm kiếm.
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim())
+      const nextSearch = search.trim()
+
+      setDebouncedSearch(nextSearch)
       setPage(1)
-    }, 300)
+    }, 400)
 
     return () => clearTimeout(timer)
   }, [search])

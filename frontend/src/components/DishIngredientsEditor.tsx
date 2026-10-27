@@ -18,7 +18,10 @@ import {
 import {
     getDishIngredients,
 } from '../services/dish-ingredient.service'
-import { getIngredients } from '../services/ingredient.service'
+import {
+    getIngredients,
+    getIngredientsPaginated,
+} from '../services/ingredient.service'
 import { getUnits } from '../services/unit.service'
 
 import type { Ingredient } from '../types/ingredient'
@@ -95,6 +98,12 @@ const DishIngredientsEditor = forwardRef<
         useState<number | null>(null)
 
     const [ingredientSearch, setIngredientSearch] = useState('')
+    const [searchResults, setSearchResults] = useState<Ingredient[]>([])
+    const [isSearching, setIsSearching] = useState(false)
+    const [searchError, setSearchError] = useState<string | null>(null)
+
+    // Dùng để ngăn request cũ ghi đè kết quả tìm kiếm mới.
+    const searchRequestIdRef = useRef(0)
 
     useEffect(() => {
         let cancelled = false
@@ -129,6 +138,10 @@ const DishIngredientsEditor = forwardRef<
                 setUnits(unitResult)
                 setIngredientRows(dishIngredientResult.data.map(toIngredientRow))
                 setExpandedIndex(null)
+                setIngredientPickerIndex(null)
+                setIngredientSearch('')
+                setSearchResults([])
+                setSearchError(null)
                 rowRefs.current.clear()
                 pendingScrollIndexRef.current = null
             } catch (error) {
@@ -173,6 +186,86 @@ const DishIngredientsEditor = forwardRef<
         })
     }, [expandedIndex, ingredientRows.length])
 
+    // Tìm kiếm trên backend sau khi người dùng dừng nhập 300ms.
+    useEffect(() => {
+        if (ingredientPickerIndex === null || disabled) {
+            searchRequestIdRef.current += 1
+            setIsSearching(false)
+            return
+        }
+
+        const requestId = ++searchRequestIdRef.current
+        const keyword = ingredientSearch.trim()
+
+        const timer = window.setTimeout(async () => {
+            setIsSearching(true)
+            setSearchError(null)
+
+            try {
+                let resultIngredients: Ingredient[]
+
+                if (!keyword) {
+                    // Khi chưa nhập từ khóa, dùng danh sách đã tải ban đầu.
+                    resultIngredients = ingredients
+                } else {
+                    // Tìm kiếm bằng API có hỗ trợ search và pagination.
+                    const result = await getIngredientsPaginated({
+                        page: 1,
+                        limit: 100,
+                        search: keyword,
+                    })
+
+                    resultIngredients = result.data
+                }
+
+                if (requestId !== searchRequestIdRef.current) return
+
+                const currentRow = ingredientRows[ingredientPickerIndex]
+                const currentIngredientId = currentRow?.ingredient_id
+
+                const currentIngredient = ingredients.find(
+                    (ingredient) => ingredient.id === currentIngredientId,
+                )
+
+                // Bảo toàn lựa chọn hiện tại nếu nguyên liệu đã ngừng hoạt động
+                // hoặc không xuất hiện trong kết quả tìm kiếm.
+                if (
+                    currentIngredient &&
+                    !resultIngredients.some(
+                        (ingredient) => ingredient.id === currentIngredient.id,
+                    )
+                ) {
+                    resultIngredients = [
+                        currentIngredient,
+                        ...resultIngredients,
+                    ]
+                }
+
+                setSearchResults(resultIngredients)
+            } catch (error) {
+                if (requestId !== searchRequestIdRef.current) return
+
+                console.error('Failed to search ingredients:', error)
+                setSearchResults([])
+                setSearchError('Không thể tìm nguyên liệu. Vui lòng thử lại.')
+            } finally {
+                if (requestId === searchRequestIdRef.current) {
+                    setIsSearching(false)
+                }
+            }
+        }, 300)
+
+        return () => {
+            window.clearTimeout(timer)
+        }
+    }, [
+        ingredientSearch,
+        ingredientPickerIndex,
+        ingredients,
+        ingredientRows,
+        disabled,
+    ])
+
     function updateRow(index: number, patch: Partial<IngredientRow>) {
         setIngredientRows((current) =>
             current.map((row, rowIndex) =>
@@ -184,6 +277,8 @@ const DishIngredientsEditor = forwardRef<
 
     function handleIngredientChange(index: number, ingredientId: string) {
         const selected = ingredients.find(
+            (ingredient) => ingredient.id === ingredientId,
+        ) ?? searchResults.find(
             (ingredient) => ingredient.id === ingredientId,
         )
 
@@ -200,6 +295,14 @@ const DishIngredientsEditor = forwardRef<
             ingredient_id: ingredientId,
             unit_id: hasDefaultUnit ? defaultUnitId : '',
         })
+
+        // Đảm bảo nguyên liệu vừa chọn vẫn có trong danh sách cục bộ.
+        if (
+            selected &&
+            !ingredients.some((ingredient) => ingredient.id === selected.id)
+        ) {
+            setIngredients((current) => [...current, selected])
+        }
     }
 
     function addRow() {
@@ -217,6 +320,8 @@ const DishIngredientsEditor = forwardRef<
     function toggleRow(index: number) {
         if (expandedIndex === index) {
             setExpandedIndex(null)
+            setIngredientPickerIndex(null)
+            setIngredientSearch('')
             return
         }
 
@@ -237,6 +342,14 @@ const DishIngredientsEditor = forwardRef<
             return current > index ? current - 1 : current
         })
 
+        setIngredientPickerIndex((current) => {
+            if (current === null) return null
+            if (current === index) return null
+            return current > index ? current - 1 : current
+        })
+
+        setIngredientSearch('')
+        setSearchResults([])
         setValidationError(null)
     }
 
@@ -434,10 +547,11 @@ const DishIngredientsEditor = forwardRef<
                                         rowRefs.current.delete(index)
                                     }
                                 }}
-                                className={`overflow-hidden rounded-xl border bg-white transition-colors ${isExpanded
-                                    ? 'border-forest/40 shadow-sm'
-                                    : 'border-beige hover:border-forest/25'
-                                    }`}
+                                className={`overflow-hidden rounded-xl border bg-white transition-colors ${
+                                    isExpanded
+                                        ? 'border-forest/40 shadow-sm'
+                                        : 'border-beige hover:border-forest/25'
+                                }`}
                             >
                                 <div className="flex items-center gap-2 p-3 sm:gap-3 sm:p-4">
                                     <button
@@ -458,8 +572,12 @@ const DishIngredientsEditor = forwardRef<
 
                                             <span className="mt-1 block truncate text-xs text-muted">
                                                 {row.quantity_per_person && row.unit_id
-                                                    ? `${row.quantity_per_person} ${units.find((unit) => unit.id === row.unit_id)
-                                                        ?.symbol ?? ''
+                                                    ? `${
+                                                        row.quantity_per_person
+                                                    } ${
+                                                        units.find(
+                                                            (unit) => unit.id === row.unit_id,
+                                                        )?.symbol ?? ''
                                                     }/người`
                                                     : 'Chưa nhập định lượng'}
                                                 {' · '}
@@ -472,8 +590,9 @@ const DishIngredientsEditor = forwardRef<
 
                                         <ChevronDown
                                             size={18}
-                                            className={`shrink-0 text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''
-                                                }`}
+                                            className={`shrink-0 text-muted transition-transform duration-200 ${
+                                                isExpanded ? 'rotate-180' : ''
+                                            }`}
                                         />
                                     </button>
 
@@ -481,8 +600,10 @@ const DishIngredientsEditor = forwardRef<
                                         type="button"
                                         onClick={() => removeRow(index)}
                                         disabled={disabled}
-                                        aria-label={`Xóa ${selectedIngredient?.name ?? `nguyên liệu ${index + 1}`
-                                            }`}
+                                        aria-label={`Xóa ${
+                                            selectedIngredient?.name ??
+                                            `nguyên liệu ${index + 1}`
+                                        }`}
                                         title="Xóa nguyên liệu"
                                         className="shrink-0 rounded-lg p-2 text-muted transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                                     >
@@ -495,7 +616,6 @@ const DishIngredientsEditor = forwardRef<
                                         id={`ingredient-panel-${index}`}
                                         className="space-y-4 border-t border-beige/70 bg-cream/50 p-4"
                                     >
-
                                         <div className="space-y-2">
                                             <label
                                                 htmlFor={`ingredient-${index}`}
@@ -515,7 +635,9 @@ const DishIngredientsEditor = forwardRef<
                                                         id={`ingredient-${index}`}
                                                         type="text"
                                                         role="combobox"
-                                                        aria-expanded={ingredientPickerIndex === index}
+                                                        aria-expanded={
+                                                            ingredientPickerIndex === index
+                                                        }
                                                         aria-controls={`ingredient-options-${index}`}
                                                         aria-autocomplete="list"
                                                         autoComplete="off"
@@ -527,6 +649,8 @@ const DishIngredientsEditor = forwardRef<
                                                         onFocus={() => {
                                                             setIngredientPickerIndex(index)
                                                             setIngredientSearch('')
+                                                            setSearchResults(ingredients)
+                                                            setSearchError(null)
                                                         }}
                                                         onChange={(event) => {
                                                             setIngredientPickerIndex(index)
@@ -536,6 +660,7 @@ const DishIngredientsEditor = forwardRef<
                                                             if (event.key === 'Escape') {
                                                                 setIngredientPickerIndex(null)
                                                                 setIngredientSearch('')
+                                                                setSearchResults([])
                                                             }
                                                         }}
                                                         onBlur={() => {
@@ -560,79 +685,100 @@ const DishIngredientsEditor = forwardRef<
                                                         role="listbox"
                                                         className="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl border border-beige bg-white p-1 shadow-lg"
                                                     >
-                                                        {ingredients
-                                                            .filter((ingredient) => {
+                                                        {isSearching && (
+                                                            <p className="px-3 py-3 text-center text-sm text-muted">
+                                                                Đang tìm nguyên liệu...
+                                                            </p>
+                                                        )}
+
+                                                        {searchError && !isSearching && (
+                                                            <p
+                                                                role="alert"
+                                                                className="px-3 py-3 text-center text-sm text-red-600"
+                                                            >
+                                                                {searchError}
+                                                            </p>
+                                                        )}
+
+                                                        {!searchError &&
+                                                            searchResults
+                                                                .filter((ingredient) => {
+                                                                    const isCurrentInactive =
+                                                                        ingredient.id === row.ingredient_id &&
+                                                                        !ingredient.is_active
+
+                                                                    return (
+                                                                        ingredient.is_active ||
+                                                                        isCurrentInactive
+                                                                    )
+                                                                })
+                                                                .map((ingredient) => {
+                                                                    const isSelected =
+                                                                        ingredient.id === row.ingredient_id
+
+                                                                    return (
+                                                                        <button
+                                                                            key={ingredient.id}
+                                                                            type="button"
+                                                                            role="option"
+                                                                            aria-selected={isSelected}
+                                                                            onMouseDown={(event) =>
+                                                                                event.preventDefault()
+                                                                            }
+                                                                            onClick={() => {
+                                                                                handleIngredientChange(
+                                                                                    index,
+                                                                                    ingredient.id,
+                                                                                )
+                                                                                setIngredientPickerIndex(null)
+                                                                                setIngredientSearch('')
+                                                                                setSearchResults([])
+                                                                            }}
+                                                                            className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                                                                                isSelected
+                                                                                    ? 'bg-sage/60 text-forest'
+                                                                                    : 'text-ink hover:bg-cream'
+                                                                            }`}
+                                                                        >
+                                                                            <span className="min-w-0">
+                                                                                <span className="block truncate font-medium">
+                                                                                    {ingredient.name}
+                                                                                </span>
+
+                                                                                {ingredient.ingredient_category_name && (
+                                                                                    <span className="mt-0.5 block truncate text-xs text-muted">
+                                                                                        {ingredient.ingredient_category_name}
+                                                                                    </span>
+                                                                                )}
+
+                                                                                {!ingredient.is_active && (
+                                                                                    <span className="mt-0.5 block text-xs text-amber-700">
+                                                                                        Ngừng hoạt động — chỉ giữ lựa chọn hiện tại
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
+
+                                                                            {isSelected && (
+                                                                                <span className="shrink-0 text-xs font-semibold">
+                                                                                    Đang chọn
+                                                                                </span>
+                                                                            )}
+                                                                        </button>
+                                                                    )
+                                                                })}
+
+                                                        {!isSearching &&
+                                                            !searchError &&
+                                                            searchResults.filter((ingredient) => {
                                                                 const isCurrentInactive =
                                                                     ingredient.id === row.ingredient_id &&
                                                                     !ingredient.is_active
 
-                                                                if (!ingredient.is_active && !isCurrentInactive) {
-                                                                    return false
-                                                                }
-
-                                                                return normalizeSearchText(ingredient.name).includes(
-                                                                    normalizeSearchText(ingredientSearch),
-                                                                )
-                                                            })
-                                                            .map((ingredient) => {
-                                                                const isSelected = ingredient.id === row.ingredient_id
-
                                                                 return (
-                                                                    <button
-                                                                        key={ingredient.id}
-                                                                        type="button"
-                                                                        role="option"
-                                                                        aria-selected={isSelected}
-                                                                        onMouseDown={(event) => event.preventDefault()}
-                                                                        onClick={() => {
-                                                                            handleIngredientChange(index, ingredient.id)
-                                                                            setIngredientPickerIndex(null)
-                                                                            setIngredientSearch('')
-                                                                        }}
-                                                                        className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${isSelected
-                                                                                ? 'bg-sage/60 text-forest'
-                                                                                : 'text-ink hover:bg-cream'
-                                                                            }`}
-                                                                    >
-                                                                        <span className="min-w-0">
-                                                                            <span className="block truncate font-medium">
-                                                                                {ingredient.name}
-                                                                            </span>
-
-                                                                            {ingredient.ingredient_category_name && (
-                                                                                <span className="mt-0.5 block truncate text-xs text-muted">
-                                                                                    {ingredient.ingredient_category_name}
-                                                                                </span>
-                                                                            )}
-
-                                                                            {!ingredient.is_active && (
-                                                                                <span className="mt-0.5 block text-xs text-amber-700">
-                                                                                    Ngừng hoạt động — chỉ giữ lựa chọn hiện tại
-                                                                                </span>
-                                                                            )}
-                                                                        </span>
-
-                                                                        {isSelected && (
-                                                                            <span className="shrink-0 text-xs font-semibold">
-                                                                                Đang chọn
-                                                                            </span>
-                                                                        )}
-                                                                    </button>
+                                                                    ingredient.is_active ||
+                                                                    isCurrentInactive
                                                                 )
-                                                            })}
-
-                                                        {ingredients.filter((ingredient) => {
-                                                            const isCurrentInactive =
-                                                                ingredient.id === row.ingredient_id &&
-                                                                !ingredient.is_active
-
-                                                            return (
-                                                                (ingredient.is_active || isCurrentInactive) &&
-                                                                normalizeSearchText(ingredient.name).includes(
-                                                                    normalizeSearchText(ingredientSearch),
-                                                                )
-                                                            )
-                                                        }).length === 0 && (
+                                                            }).length === 0 && (
                                                                 <p className="px-3 py-4 text-center text-sm text-muted">
                                                                     Không tìm thấy nguyên liệu phù hợp.
                                                                 </p>
@@ -641,7 +787,6 @@ const DishIngredientsEditor = forwardRef<
                                                 )}
                                             </div>
                                         </div>
-
 
                                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
                                             <div className="space-y-2">
@@ -682,7 +827,9 @@ const DishIngredientsEditor = forwardRef<
                                                     id={`unit-${index}`}
                                                     value={row.unit_id}
                                                     onChange={(event) =>
-                                                        updateRow(index, { unit_id: event.target.value })
+                                                        updateRow(index, {
+                                                            unit_id: event.target.value,
+                                                        })
                                                     }
                                                     required
                                                     disabled={disabled}
@@ -691,7 +838,10 @@ const DishIngredientsEditor = forwardRef<
                                                     <option value="">Chọn đơn vị</option>
 
                                                     {units.map((unit) => (
-                                                        <option key={unit.id} value={unit.id}>
+                                                        <option
+                                                            key={unit.id}
+                                                            value={unit.id}
+                                                        >
                                                             {unit.name} ({unit.symbol})
                                                         </option>
                                                     ))}
@@ -718,8 +868,12 @@ const DishIngredientsEditor = forwardRef<
                                                 disabled={disabled}
                                                 className="w-full rounded-xl border border-beige bg-white px-3 py-3 text-sm text-ink outline-none focus:border-forest disabled:opacity-60"
                                             >
-                                                <option value="main">Nguyên liệu chính</option>
-                                                <option value="minor">Nguyên liệu phụ</option>
+                                                <option value="main">
+                                                    Nguyên liệu chính
+                                                </option>
+                                                <option value="minor">
+                                                    Nguyên liệu phụ
+                                                </option>
                                             </select>
                                         </div>
 
