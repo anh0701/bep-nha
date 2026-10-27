@@ -14,6 +14,8 @@ interface CategorySelectProps {
   disabled?: boolean
   required?: boolean
   id?: string
+  compact?: boolean
+  showIcon?: boolean
 }
 
 export default function CategorySelect({
@@ -27,6 +29,8 @@ export default function CategorySelect({
   disabled = false,
   required = false,
   id,
+  compact = false,
+  showIcon = true,
 }: CategorySelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -74,7 +78,13 @@ export default function CategorySelect({
         aria-expanded={isOpen}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
-        className={`flex w-full items-center gap-3 rounded-xl border bg-white px-4 py-3 text-left text-sm transition-all duration-200
+        className={`flex w-full items-center text-left text-sm transition-all duration-200
+          ${
+            compact
+              ? 'gap-2 rounded-2xl px-3 py-3.5'
+              : 'gap-3 rounded-xl px-4 py-3'
+          }
+          border bg-white
           ${
             isOpen
               ? 'border-forest ring-4 ring-sage/60'
@@ -83,9 +93,15 @@ export default function CategorySelect({
           ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
         `}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sage/70 text-forest">
-          <Utensils size={17} />
-        </span>
+        {showIcon && (
+          <span
+            className={`flex shrink-0 items-center justify-center rounded-lg bg-sage/70 text-forest ${
+              compact ? 'size-7' : 'size-9'
+            }`}
+          >
+            <Utensils size={compact ? 15 : 17} />
+          </span>
+        )}
 
         <span
           className={`min-w-0 flex-1 truncate ${
@@ -96,31 +112,23 @@ export default function CategorySelect({
         </span>
 
         {value && !required && !disabled && (
-          <span
-            role="button"
+          <button
+            type="button"
             aria-label="Bỏ chọn danh mục"
-            tabIndex={0}
+            title="Bỏ chọn danh mục"
             onClick={(event) => {
               event.stopPropagation()
               onChange(includeAll ? 'all' : '')
               setIsOpen(false)
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                event.stopPropagation()
-                onChange(includeAll ? 'all' : '')
-                setIsOpen(false)
-              }
-            }}
-            className="rounded-md p-1 text-muted transition-colors hover:bg-beige hover:text-ink"
+            className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-beige hover:text-ink"
           >
             <X size={15} />
-          </span>
+          </button>
         )}
 
         <ChevronDown
-          size={18}
+          size={compact ? 16 : 18}
           className={`shrink-0 text-muted transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-forest' : ''
           }`}

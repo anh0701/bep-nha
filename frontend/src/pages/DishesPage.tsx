@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
@@ -27,7 +26,6 @@ import DishDetailModal from '../components/DishDetailModal'
 import PageFilters from '../components/PageFilters'
 
 export default function DishesPage() {
-
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -52,6 +50,7 @@ export default function DishesPage() {
   const [categories, setCategories] = useState<Category[]>([])
 
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   const [page, setPage] = useState(1)
@@ -98,19 +97,32 @@ export default function DishesPage() {
     }
   }, [])
 
-  // Lấy danh sách món ăn theo trang, từ khóa và danh mục
+  // Chờ người dùng ngừng gõ 400 ms rồi mới tìm kiếm.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Lấy danh sách món ăn theo trang, từ khóa đã debounce và danh mục.
   useEffect(() => {
     let cancelled = false
 
     async function loadDishes() {
       try {
-        setLoading(true)
+        // Chỉ hiển thị loading toàn màn hình khi chưa có dữ liệu.
+        if (dishes.length === 0 && totalItems === 0) {
+          setLoading(true)
+        }
+
         setError(null)
 
         const result = await getDishesPaginated({
           page,
           limit,
-          search: search.trim(),
+          search: debouncedSearch,
           categoryId:
             selectedCategory === 'all' ? '' : selectedCategory,
         })
@@ -147,7 +159,13 @@ export default function DishesPage() {
     return () => {
       cancelled = true
     }
-  }, [page, limit, search, selectedCategory, refreshKey])
+  }, [
+    page,
+    limit,
+    debouncedSearch,
+    selectedCategory,
+    refreshKey,
+  ])
 
   function openCreateForm() {
     setEditingDish(null)
@@ -167,6 +185,7 @@ export default function DishesPage() {
   function handleDishSaved(_savedDish: Dish) {
     closeCreateForm()
     setSearch('')
+    setDebouncedSearch('')
     setSelectedCategory('all')
     setPage(1)
     setRefreshKey((current) => current + 1)
@@ -201,6 +220,7 @@ export default function DishesPage() {
 
   function clearFilters() {
     setSearch('')
+    setDebouncedSearch('')
     setSelectedCategory('all')
     setPage(1)
   }

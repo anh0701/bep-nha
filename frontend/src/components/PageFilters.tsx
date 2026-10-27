@@ -1,5 +1,6 @@
+import { Search, X } from 'lucide-react'
 
-import { ChevronDown, Search, X } from 'lucide-react'
+import CategorySelect from './CategorySelect'
 
 export interface PageFilterOption {
   label: string
@@ -60,55 +61,25 @@ export default function PageFilters({
           )}
         </div>
 
-        {/* Các combobox bộ lọc */}
+        {/* Các bộ lọc danh mục */}
         {selects.length > 0 && (
           <div className="flex flex-col gap-3 sm:flex-row">
-            {selects.map((item) => {
-              const defaultValue = item.options[0]?.value ?? ''
-              const hasSelection = item.value !== defaultValue
-
-              return (
-                <div key={item.key} className="relative min-w-0 sm:w-56">
-                  <label
-                    htmlFor={`filter-${item.key}`}
-                    className="sr-only"
-                  >
-                    {item.label}
-                  </label>
-
-                  <select
-                    id={`filter-${item.key}`}
-                    value={item.value}
-                    onChange={(event) => item.onChange(event.target.value)}
-                    aria-label={item.label}
-                    className="w-full appearance-none rounded-2xl border border-beige bg-white py-3.5 pl-4 pr-16 text-sm text-ink outline-none transition focus:border-forest"
-                  >
-                    {item.options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {hasSelection && (
-                    <button
-                      type="button"
-                      onClick={() => item.onChange(defaultValue)}
-                      aria-label={`Xóa bộ lọc ${item.label}`}
-                      title="Xóa bộ lọc này"
-                      className="absolute top-1/2 right-8 -translate-y-1/2 rounded-full p-1 text-muted transition hover:bg-sage/60 hover:text-forest"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted"
-                  />
-                </div>
-              )
-            })}
+            {selects.map((item) => (
+              <div key={item.key} className="min-w-0 sm:w-56">
+                <CategorySelect
+                  id={`filter-${item.key}`}
+                  categories={item.options.map((option) => ({
+                    id: option.value,
+                    name: option.label,
+                  }))}
+                  value={item.value}
+                  onChange={item.onChange}
+                  ariaLabel={item.label}
+                  compact
+                  showIcon={false}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>

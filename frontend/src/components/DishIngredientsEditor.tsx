@@ -440,14 +440,14 @@ const DishIngredientsEditor = forwardRef<
         units,
     ])
 
-    function normalizeSearchText(value: string): string {
-        return value
-            .toLocaleLowerCase('vi')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/đ/g, 'd')
-            .trim()
-    }
+    // function normalizeSearchText(value: string): string {
+    //     return value
+    //         .toLocaleLowerCase('vi')
+    //         .normalize('NFD')
+    //         .replace(/[\u0300-\u036f]/g, '')
+    //         .replace(/đ/g, 'd')
+    //         .trim()
+    // }
 
     return (
         <section className="space-y-4">
