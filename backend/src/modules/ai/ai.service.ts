@@ -34,7 +34,7 @@ const MAX_RETRIES = 3
 export async function chatWithGemini(
   data: ChatRequest,
 ): Promise<ChatResponse> {
-  console.log('[AI] Received message:', data.message)
+  // console.log('[AI] Received message:', data.message)
 
   const history = (data.history ?? []).slice(-10)
 
@@ -66,28 +66,28 @@ async function generateWithFunctionCalling(
     round <= MAX_FUNCTION_ROUNDS;
     round++
   ) {
-    console.log(
-      `[AI] Starting Gemini request - Round ${round + 1}`,
-    )
+    // console.log(
+    //   `[AI] Starting Gemini request - Round ${round + 1}`,
+    // )
 
     const response = await generateWithRetry(contents)
 
-    console.log(
-      `[AI] Gemini responded - Round ${round + 1}`,
-    )
+    // console.log(
+    //   `[AI] Gemini responded - Round ${round + 1}`,
+    // )
 
     const functionCalls = response.functionCalls ?? []
 
-    console.log(
-      '[AI] Function calls:',
-      functionCalls.map((call) => call.name),
-    )
+    // console.log(
+    //   '[AI] Function calls:',
+    //   functionCalls.map((call) => call.name),
+    // )
 
     // Không còn function call: Gemini đã tạo câu trả lời cuối.
     if (functionCalls.length === 0) {
       const answer = response.text?.trim()
 
-      console.log('[AI] Final answer:', answer)
+      // console.log('[AI] Final answer:', answer)
 
       if (!answer) {
         throw new Error('Gemini returned an empty response')
@@ -142,10 +142,10 @@ async function generateWithFunctionCalling(
             call.args ?? {},
           )
 
-          console.log(
-            `[AI] Function result: ${name}`,
-            result,
-          )
+          // console.log(
+          //   `[AI] Function result: ${name}`,
+          //   result,
+          // )
 
           const functionName = name as AiFunctionName
 

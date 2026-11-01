@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bot, LoaderCircle } from 'lucide-react'
 
 import AIAssistantButton from './AIAssistantButton'
@@ -24,12 +24,27 @@ export default function AIAssistant() {
     startY: number
   } | null>(null)
 
+  // Ref của vùng hiển thị tin nhắn
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+
   const {
     messages,
     isLoading,
     error,
     sendMessage,
   } = useAIAssistant()
+
+  // Tự động cuộn xuống cuối khi có tin nhắn mới
+  useEffect(() => {
+    const container = messagesContainerRef.current
+
+    if (!container) return
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    })
+  }, [messages, isLoading, isOpen])
 
   function handleDragStart(
     event: React.PointerEvent<HTMLDivElement>,
@@ -128,7 +143,10 @@ export default function AIAssistant() {
           }}
         >
           <div className="flex h-full flex-col">
-            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+            <div
+              ref={messagesContainerRef}
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
+            >
               {messages.map((message) => (
                 <AIChatMessage
                   key={message.id}
