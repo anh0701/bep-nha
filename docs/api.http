@@ -290,3 +290,12 @@ Content-Type: application/json
     "unknown_label"
   ]
 }
+
+###
+POST {{baseUrl}}/api/ai/chat 
+Accept: application/json
+Content-Type: application/json
+
+{
+  "message": "Tôi muốn nấu một món thịt heo đơn giản cho bữa cơm gia đình"
+}

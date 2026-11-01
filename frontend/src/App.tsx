@@ -13,6 +13,7 @@ import MealPlanDetailPage from './pages/MealPlanDetailPage'
 import StatisticsPage from './pages/StatisticsPage'
 import IngredientsPage from './pages/IngredientsPage'
 import IngredientSearchPage from './pages/IngredientSearchPage'
+import AIAssistant from './components/ai-assistant/AIAssistant'
 // import IngredientRecognitionPage from './pages/IngredientRecognition'
 
 function AppLayout() {
@@ -39,6 +40,8 @@ function AppLayout() {
       </main>
 
       <MobileNav />
+
+      <AIAssistant />
     </div>
   )
 }
